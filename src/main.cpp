@@ -12,6 +12,7 @@
 #include "gn_perf_config.hpp"
 #include "stat_acc.hpp"
 #include "gn_glfw.hpp"
+#include "hash.hpp"
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -106,7 +107,7 @@ int main(int argc, char *argv[])
 
             // Update uniforms
             context.state().get<shadertoy::iTime>() = t;
-            context.state().get<shadertoy::iFrame>() = frameCount;
+            context.state().get<shadertoy::iFrame>() = uhash(frameCount);
 
             // Set viewport
             // This is not necessary when the last pass is rendering to a
