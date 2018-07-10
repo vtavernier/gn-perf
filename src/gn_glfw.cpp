@@ -1,6 +1,7 @@
 #include <epoxy/gl.h>
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
 #include <iostream>
 
 #include <shadertoy.hpp>
@@ -11,11 +12,32 @@
 
 using shadertoy::utils::log;
 
-gn_perf_ctx::gn_perf_ctx(int width, int height)
+gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines)
     : context(),
     chain(),
     render_size(width, height)
 {
+    // Merge the defines with the default template
+    auto &buffer_definitions(static_cast<shadertoy::compiler::define_part*>(context.buffer_template()[GL_FRAGMENT_SHADER].find("glsl:defines").get())->definitions()->definitions());
+
+    std::transform(defines.begin(), defines.end(), std::inserter(buffer_definitions, buffer_definitions.end()), [](const auto &definition)
+            {
+                auto eq_sign(definition.find("="));
+                std::pair<std::string, std::string> rp;
+                if (eq_sign == std::string::npos)
+                {
+                    rp = std::make_pair(std::string(definition), std::string());
+                }
+                else
+                {
+                    rp = std::make_pair(
+                            std::string(definition.begin(), definition.begin() + eq_sign),
+                            std::string(definition.begin() + eq_sign + 1, definition.end()));
+                }
+                std::transform(rp.first.begin(), rp.first.end(), rp.first.begin(), ::toupper);
+                return rp;
+            });
+
     // Create the image buffer
     auto imageBuffer(std::make_shared<shadertoy::buffers::toy_buffer>("image"));
     imageBuffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gradient.glsl");

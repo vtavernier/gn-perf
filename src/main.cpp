@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     unsigned long long samples;
     bool st_silent, all_silent, raw_output, sync_anyways;
     std::string include_stat;
+    std::vector<std::string> defines;
 
     po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
     desc.add_options()
@@ -36,6 +37,7 @@ int main(int argc, char *argv[])
         ("include-stat,I", po::value(&include_stat)->default_value("t_ms,fps,mpxps"), "Stats to include in the output")
         ("raw,r", po::bool_switch(&raw_output)->default_value(false), "Raw value output (no header nor size). Only applies to final output")
         ("sync,S", po::bool_switch(&sync_anyways)->default_value(false), "Force vsync even if measuring performance")
+        ("define,D", po::value(&defines)->multitoken(), "Preprocessor definitions for the shader")
         ("help,h", "Show this help message");
 
     po::variables_map vm;
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
     return glfw_run(width, height, samples <= 0 || sync_anyways ? 1 : 0, [&](auto *window)
     {
         // Create the context and swap chain
-        gn_perf_ctx ctx(width, height);
+        gn_perf_ctx ctx(width, height, defines);
         auto &context(ctx.context);
         auto &chain(ctx.chain);
 

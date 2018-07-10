@@ -8,7 +8,7 @@ struct gn_perf_ctx
     shadertoy::rsize render_size;
     std::shared_ptr<shadertoy::buffers::toy_buffer> image_buffer;
 
-    gn_perf_ctx(int width, int height);
+    gn_perf_ctx(int width, int height, const std::vector<std::string> &defines);
 };
 
 void gn_set_framebuffer_size(GLFWwindow *window, int width, int height);
