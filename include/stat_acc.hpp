@@ -27,7 +27,7 @@ public:
     {
         std::stringstream ss;
         auto avg = sum / cnt,
-             sdd = (sum2 - sum / cnt * sum / cnt) / (cnt - 1);
+             sdd = sqrt(sum2 / cnt - avg * avg);
 
         if (!raw_output && !output_header)
         {
