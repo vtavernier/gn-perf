@@ -22,7 +22,7 @@ using shadertoy::gl::gl_call;
 int main(int argc, char *argv[])
 {
     int width, height, size;
-    unsigned long long samples;
+    long long samples, warmup_samples;
     bool st_silent, all_silent, raw_output, sync_anyways;
     std::string include_stat;
     std::vector<std::string> defines;
@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
         ("width", po::value(&width)->default_value(640), "Width of the rendering")
         ("height", po::value(&height)->default_value(480), "Height of the rendering")
         ("size,s", po::value(&size)->default_value(-1), "Size (overrides width and height) of the rendering")
+        ("warmup,W", po::value(&warmup_samples)->default_value(64), "Number of samples to warm-up the measurements")
         ("samples,n", po::value(&samples)->default_value(0), "Number of samples to collect for statistics")
         ("define,D", po::value(&defines)->multitoken()->composing(), "Preprocessor definitions for the shader\n"
          "The following values are supported: \n"
@@ -117,11 +118,13 @@ int main(int argc, char *argv[])
 
     if (samples == 0)
         log::shadertoy()->info("No sample count specified, running at vsync for debug");
+    else if (samples < 0)
+        log::shadertoy()->info("About to collect enough samples so stddev% < {}e-2%", -samples);
     else
         log::shadertoy()->info("About to collect {} samples", samples);
 
 
-    return glfw_run(width, height, samples <= 0 || sync_anyways ? 1 : 0, [&](auto *window)
+    return glfw_run(width, height, samples == 0 || sync_anyways ? 1 : 0, [&](auto *window)
     {
         // Create the context and swap chain
         gn_perf_ctx ctx(width, height, defines);
@@ -137,7 +140,7 @@ int main(int argc, char *argv[])
 
         stat_acc time_ms;
 
-        fprintf(stderr, "%8s\t%10s\t%9s\t%13s\t%4s\t%4s\n", "frame", "time_ms", "fps", "mpx_s", "wh_px", "ch_px");
+        fprintf(stderr, "%8s\t%10s\t%9s\t%13s\t%4s\t%4s\t%9s\n", "frame", "time_ms", "fps", "mpx_s", "wh_px", "ch_px", "stddevp");
 
         while (!glfwWindowShouldClose(window))
         {
@@ -162,24 +165,34 @@ int main(int argc, char *argv[])
             // Buffer swapping
             glfwSwapBuffers(window);
 
-            // Get the render time for the frame
-            auto elapsed_time = ctx.image_buffer->elapsed_time();
-            auto pixel_count = static_cast<double>(ctx.render_size.width * ctx.render_size.height);
-            fprintf(stderr, "%8d\t%10lf\t%8.2lf\t%12.2lf\t%4d\t%4d\n",
-                    frameCount,
-                    elapsed_time / 1e6,
-                    1.0e9 / elapsed_time,
-                    1.0e3 * pixel_count / elapsed_time,
-                    ctx.render_size.width,
-                    ctx.render_size.height);
+            if (warmup_samples <= 0)
+            {
+                // Get the render time for the frame
+                auto elapsed_time = ctx.image_buffer->elapsed_time();
+                auto pixel_count = static_cast<double>(ctx.render_size.width * ctx.render_size.height);
 
-            // 0 should not be measured by the driver
-            if (elapsed_time != 0)
-                time_ms.sample(elapsed_time / 1e6);
+                // 0 should not be measured by the driver
+                if (elapsed_time != 0)
+                    time_ms.sample(elapsed_time / 1e6);
 
-            // 1024 samples is enough
-            if (samples > 0 && time_ms.sample_count() == samples)
-                glfwSetWindowShouldClose(window, 1);
+                auto stddevp = time_ms.stddevp();
+                if ((samples > 0 && time_ms.sample_count() == samples) ||
+                    (samples < 0 && time_ms.sample_count() >= 16 && (stddevp * 1e4) < -samples))
+                    glfwSetWindowShouldClose(window, 1);
+
+                fprintf(stderr, "%8d\t%10lf\t%8.2lf\t%12.2lf\t%4d\t%4d\t%8.2lf\n",
+                        frameCount,
+                        elapsed_time / 1e6,
+                        1.0e9 / elapsed_time,
+                        1.0e3 * pixel_count / elapsed_time,
+                        ctx.render_size.width,
+                        ctx.render_size.height,
+                        stddevp * 1e2);
+            }
+            else
+            {
+                warmup_samples--;
+            }
 
             // Update time and framecount
             t = glfwGetTime();

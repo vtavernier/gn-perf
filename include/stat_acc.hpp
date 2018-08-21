@@ -4,10 +4,10 @@
 class stat_acc
 {
     double sum, sum2, min, max;
-    unsigned long long cnt;
+    long long cnt;
 
 public:
-    inline unsigned long long sample_count() const
+    inline long long sample_count() const
     { return cnt; }
 
     template<typename T>
@@ -20,6 +20,12 @@ public:
 
         cnt++;
         return value;
+    }
+
+    inline double stddevp() const
+    {
+        double avg = sum / cnt;
+        return sqrt(sum2 / cnt - avg * avg) / avg;
     }
 
     template<typename Callable>
