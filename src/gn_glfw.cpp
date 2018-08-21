@@ -7,6 +7,8 @@
 #include <shadertoy.hpp>
 #include <shadertoy/utils/log.hpp>
 
+#include <picosha2.h>
+
 #include "gn_perf_config.hpp"
 #include "gn_glfw.hpp"
 
@@ -59,7 +61,8 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
     render_size(width, height)
 {
     // Merge the defines with the default template
-    auto &buffer_definitions(static_cast<shadertoy::compiler::define_part*>(context.buffer_template()[GL_FRAGMENT_SHADER].find("glsl:defines").get())->definitions()->definitions());
+    auto preprocessor_defines(std::make_shared<shadertoy::compiler::preprocessor_defines>());
+    auto &buffer_definitions(preprocessor_defines->definitions());
 
     std::transform(defines.begin(), defines.end(), std::inserter(buffer_definitions, buffer_definitions.end()), [](const auto &definition)
             {
@@ -94,22 +97,34 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
         }
     }
 
+    context.buffer_template().shader_defines().emplace("gn_perf", preprocessor_defines);
+
     // Create the image buffer
-    auto imageBuffer(std::make_shared<shadertoy::buffers::toy_buffer>("image"));
-    imageBuffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gn.glsl");
-    image_buffer = imageBuffer;
+    std::map<GLenum, std::string> sources;
+
+    image_buffer = std::make_shared<shadertoy::buffers::toy_buffer>("image");
+    image_buffer->source_map(&sources);
+    image_buffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gn.glsl");
 
     // Add the image buffer to the swap chain, at the given size
     // The default_framebuffer policy makes this buffer draw directly to
     // the window instead of using a texture that is then copied to the
     // screen.
-    chain.emplace_back(imageBuffer, shadertoy::make_size_ref(render_size),
+    chain.emplace_back(image_buffer, shadertoy::make_size_ref(render_size),
                        shadertoy::member_swap_policy::default_framebuffer);
 
     // Initialize context
     context.init(chain);
-    log::shadertoy()->info("Initialized swap chain");
 
+    // Compute identifier for the sources
+    auto &sources_str(sources[GL_FRAGMENT_SHADER]);
+    std::vector<uint8_t> hash(picosha2::k_digest_size);
+    picosha2::hash256(sources_str.begin(), sources_str.end(), hash.begin(), hash.end());
+    identifier = picosha2::bytes_to_hex_string(hash.begin(), hash.end());
+    log::shadertoy()->info("Initialized swap chain {}", identifier);
+
+    // Clear the source map
+    image_buffer->source_map(nullptr);
 }
 
 void gn_set_framebuffer_size(GLFWwindow *window, int width, int height)

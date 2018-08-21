@@ -9,6 +9,7 @@ convolution in order to evaluate their performance.
 * GLFW3
 * epoxy
 * libshadertoy (included in `libshadertoy/`)
+* PicoSHA2 (included in `PicoSHA2/`)
 
 ```bash
 sudo apt install build-essential cmake pkg-config libepoxy-dev libglfw3-dev libboost-filesystem-dev \

@@ -30,6 +30,7 @@ add_executable(gn_perf ${SRC_DIR}/main.cpp ${SRC_DIR}/gn_glfw.cpp)
 set_target_properties(gn_perf PROPERTIES CXX_STANDARD 14)
 target_include_directories(gn_perf PRIVATE
     ${INC_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/PicoSHA2
     ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(gn_perf PRIVATE
     ${EPOXY_LIBRARIES}

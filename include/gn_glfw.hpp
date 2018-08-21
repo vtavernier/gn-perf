@@ -7,6 +7,7 @@ struct gn_perf_ctx
     shadertoy::swap_chain chain;
     shadertoy::rsize render_size;
     std::shared_ptr<shadertoy::buffers::toy_buffer> image_buffer;
+    std::string identifier;
 
     gn_perf_ctx(int width, int height, const std::vector<std::string> &defines);
 };

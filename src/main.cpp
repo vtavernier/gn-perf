@@ -212,6 +212,12 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "\n");
 
+        // Print state identifier
+        if (!raw_output)
+        {
+            printf("# %s\n", ctx.identifier.c_str());
+        }
+
         bool output_header = false;
         if (include_stat.find("t_ms") != std::string::npos)
             printf("%s\n", time_ms.summary(raw_output, output_header, "t_ms").c_str());
