@@ -49,7 +49,10 @@ int main(int argc, char *argv[])
          "\t   - WEIGHTS_BERNOULLI: Bernoulli {-1, 1} weights\n"
          "\t   - WEIGHTS_NONE: no weights\n"
          "\t - POINTS=type: type of the point distribution:\n"
-         "\t   - POINTS_WHITE: white (Poisson) points (default)\n");
+         "\t   - POINTS_WHITE: white (Poisson) points (default)\n"
+         "\t - PRNG=type: type of the PRNG to use:\n"
+         "\t   - PRNG_LCG: linear congruential generator (default)\n"
+         "\t   - PRNG_XOROSHIRO: SIMD xoroshiro64** generator");
 
     po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
     desc.add_options()

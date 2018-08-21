@@ -10,6 +10,9 @@
 
 #define POINTS_WHITE 0
 
+#define PRNG_LCG 0
+#define PRNG_XOROSHIRO 1
+
 #ifndef WIDTH
 #define WIDTH int(iResolution.x)
 #endif
@@ -26,6 +29,14 @@
 #define TILE_SIZE (RESOLUTION / 3)
 #endif
 
+#ifndef DISP_SIZE
+#define DISP_SIZE 1
+#endif
+
+#ifndef RANDOM_SEED
+#define RANDOM_SEED 0
+#endif
+
 #ifndef POINTS
 #define POINTS POINTS_WHITE
 #endif
@@ -34,12 +45,8 @@
 #define WEIGHTS WEIGHTS_UNIFORM
 #endif
 
-#ifndef DISP_SIZE
-#define DISP_SIZE 1
-#endif
-
-#ifndef RANDOM_SEED
-#define RANDOM_SEED 0
+#ifndef PRNG
+#define PRNG PRNG_LCG
 #endif
 
 float h(vec2 x, float phase) {
@@ -73,78 +80,154 @@ uint hash(uint x) {
     return x;
 }
 
-// LCG random
-struct lcg_state { uint x_; };
+uvec4 hash4(uvec4 x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3bu;
+    x = ((x >> 16) ^ x) * 0x45d9f3bu;
+    x = (x >> 16) ^ x;
+    return x;
+}
 
-void lcg_seed(inout lcg_state this_, uint seed) {
+// LCG random
+#if PRNG == PRNG_LCG
+struct prng_state { uint x_; };
+
+void prng_seed(inout prng_state this_, uint seed) {
     this_.x_ = hash(seed);
 }
 
-uint lcg_rand(inout lcg_state this_) {
+uint prng_rand(inout prng_state this_) {
     return this_.x_ *= 3039177861u;
 }
 
-float lcg_rand01(inout lcg_state this_) {
-    return lcg_rand(this_) / float(4294967295u);
+float prng_rand01(inout prng_state this_) {
+    return prng_rand(this_) / float(4294967295u);
 }
 
-vec2 lcg_rand2(inout lcg_state this_) {
-    return 2. * vec2(lcg_rand01(this_), lcg_rand01(this_)) - 1.;
+vec2 prng_rand2(inout prng_state this_) {
+    return 2. * vec2(prng_rand01(this_), prng_rand01(this_)) - 1.;
 }
 
-int lcg_poisson(inout lcg_state this_, float mean) {
-	float g = exp(-mean);
-	int em = 0;
-	float t = lcg_rand01(this_);
-	while (t > g) {
-		++em;
-		t *= lcg_rand01(this_);
-	}
-	return em;
+#elif PRNG == PRNG_XOROSHIRO
+struct prng_state { uvec4 x_; };
+
+uint rotl(uint x, int k) {
+    return (x << k) | (x >> (32 - k));
 }
 
+// Generates 1 uniform integers, updates the state given as input
+uint next(inout uvec2 s) {
+    uint s0 = s.x;
+    uint s1 = s.y;
+    uint rs = rotl(s0 * 0x9E3779BBu, 5) * 5u;
 
-#if POINTS == 0
+    s1 ^= s0;
+    s.x = rotl(s0, 26) ^ s1 ^ (s1 << 9);
+    s.y = rotl(s1, 13);
+
+    return rs;
+}
+
+// Converts an unsigned int to a float in [0,1]
+float tofloat(uint u) {
+    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
+    //return float(u >> 8) * (1. / float(1u << 24));
+
+    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
+    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
+}
+
+uvec2 rotl2(uvec2 x, int k) {
+    return (x << k) | (x >> (32 - k));
+}
+
+// Generates 2 uniform integers, updates the state given as input
+uvec2 next2(inout uvec4 s) {
+    uvec2 s0 = s.xz;
+    uvec2 s1 = s.yw;
+    uvec2 rs = rotl2(s0 * 0x9E3779BBu, 5) * 5u;
+
+    s1 ^= s0;
+    s.xz = rotl2(s0, 26) ^ s1 ^ (s1 << 9);
+    s.yw = rotl2(s1, 13);
+
+    return rs;
+}
+
+// Converts a vector of unsigned ints to floats in [0,1]
+vec2 tofloat2(uvec2 u) {
+    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
+    //return vec2(u >> 8) * (1. / float(1u << 24));
+
+    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
+    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
+}
+
+void prng_seed(inout prng_state this_, uint seed) {
+    this_.x_ = hash4(seed << 4 | uvec4(0, 1, 2, 3));
+}
+
+uint prng_rand(inout prng_state this_) {
+    return next(this_.x_.xy);
+}
+
+float prng_rand01(inout prng_state this_) {
+    return tofloat(prng_rand(this_));
+}
+
+vec2 prng_rand2(inout prng_state this_) {
+    return 2. * tofloat2(next2(this_.x_)) - 1.;
+}
+
+#endif
+
+int prng_poisson(inout prng_state this_, float mean) {
+    float g = exp(-mean);
+    int em = 0;
+    float t = prng_rand01(this_);
+    while (t > g) {
+        ++em;
+        t *= prng_rand01(this_);
+    }
+    return em;
+}
+
+#if POINTS == POINTS_WHITE
 // White noise generator
 struct point_gen_state {
-    lcg_state state;
+    prng_state state;
 };
 
 void pg_seed(inout point_gen_state this_, ivec2 nc, inout int splats, out int expected_splats)
 {
     uint seed = uint(nc.x * TILE_COUNT.x + nc.y + 1 + RANDOM_SEED);
-    lcg_seed(this_.state, seed);
+    prng_seed(this_.state, seed);
 
     // The expected number of points for given splats is splats
     expected_splats = splats;
 
     // Poisson
-    splats = lcg_poisson(this_.state, splats);
+    splats = prng_poisson(this_.state, splats);
 }
 
 void pg_point(inout point_gen_state this_, out vec4 pt)
 {
-    pt.xy = lcg_rand2(this_.state);
+    pt.xy = prng_rand2(this_.state);
+    pt.zw = prng_rand2(this_.state);
 
 #if WEIGHTS == WEIGHTS_NONE
     pt.z = 1.;
 #elif WEIGHTS == WEIGHTS_UNIFORM
     // Compensate loss of variance compared to Bernoulli
-    pt.z = sqrt(3.) * (2. * lcg_rand01(this_.state) - 1.);
+    pt.z *= sqrt(3.);
 #elif WEIGHTS == WEIGHTS_BERNOULLI
-    pt.z = lcg_rand01(this_.state) < .5 ? -1. : 1.;
+    pt.z = sign(pt.z);
 #endif
 
 #if RANDOM_PHASE
-    pt.w = M_PI * (2. * lcg_rand01(this_.state) - 1.);
+    pt.w *= M_PI;
 #else
     pt.w = 0.;
 #endif
-}
-
-float pg_rand(inout point_gen_state this_, float max_value)
-{
-    return max_value * (2. * lcg_rand01(this_.state) - 1.);
 }
 #endif
 
