@@ -9,10 +9,18 @@
 #include <shadertoy.hpp>
 #include <shadertoy/utils/log.hpp>
 
+#include <signal.h>
+
 #include "gn_perf_config.hpp"
 #include "stat_acc.hpp"
 #include "gn_glfw.hpp"
 #include "hash.hpp"
+
+static volatile int sigint_signaled = 0;
+
+void sigint_handler(int _) {
+    sigint_signaled = 1;
+}
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -143,7 +151,9 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "%8s\t%10s\t%9s\t%13s\t%4s\t%4s\t%9s\n", "frame", "time_ms", "fps", "mpx_s", "wh_px", "ch_px", "stddevp");
 
-        while (!glfwWindowShouldClose(window))
+        signal(SIGINT, sigint_handler);
+
+        while (!glfwWindowShouldClose(window) && !sigint_signaled)
         {
             // Poll events
             glfwPollEvents();
