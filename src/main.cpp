@@ -27,25 +27,61 @@ int main(int argc, char *argv[])
     std::string include_stat;
     std::vector<std::string> defines;
 
-    po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
-    desc.add_options()
+    po::options_description gn_desc("Noise options");
+    gn_desc.add_options()
         ("width", po::value(&width)->default_value(640), "Width of the rendering")
         ("height", po::value(&height)->default_value(480), "Height of the rendering")
         ("size,s", po::value(&size)->default_value(-1), "Size (overrides width and height) of the rendering")
         ("samples,n", po::value(&samples)->default_value(0), "Number of samples to collect for statistics")
+        ("define,D", po::value(&defines)->multitoken()->composing(), "Preprocessor definitions for the shader\n"
+         "The following values are supported: \n"
+         "\t * SPLATS=n: number of splats per cell\n"
+         "\t * F0=freq: frequency of the kernel\n"
+         "\t - W0=angle: angle of the anisotropic kernel (defaults to pi/4)\n"
+         "\t - TILE_SIZE=size: kernel diameter, in pixels (defaults to width/3)\n"
+         "\t - RANDOM_SEED=r: random seed (defaults to 0)\n"
+         "\t - DISP_SIZE=s: number of cells to look for contributing splats (defaults to 1)\n"
+         "\t - KTRUNC: make kernel boundary C0\n"
+         "\t - KSIN: use sin instead of cos for kernel\n"
+         "\t - RANDOM_PHASE: use random phase kernel\n"
+         "\t - WEIGHTS=weight: type of the random weights to use:\n"
+         "\t   - WEIGHTS_UNIFORM: uniform [-1, 1] weights (default)\n"
+         "\t   - WEIGHTS_BERNOULLI: Bernoulli {-1, 1} weights\n"
+         "\t   - WEIGHTS_NONE: no weights\n"
+         "\t - POINTS=type: type of the point distribution:\n"
+         "\t   - POINTS_WHITE: white (Poisson) points (default)\n");
+
+    po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
+    desc.add_options()
+        ("config,C", po::value<std::string>(), "Configuration file for the noise")
         ("quiet,q", po::bool_switch(&st_silent)->default_value(false), "Silence libshadertoy debug messages")
         ("very-quiet,Q", po::bool_switch(&all_silent)->default_value(false), "Silence everything but the final output")
         ("include-stat,I", po::value(&include_stat)->default_value("t_ms,fps,mpxps"), "Stats to include in the output")
         ("raw,r", po::bool_switch(&raw_output)->default_value(false), "Raw value output (no header nor size). Only applies to final output")
         ("sync,S", po::bool_switch(&sync_anyways)->default_value(false), "Force vsync even if measuring performance")
-        ("define,D", po::value(&defines)->multitoken(), "Preprocessor definitions for the shader")
         ("help,h", "Show this help message");
+
+    desc.add(gn_desc);
 
     po::variables_map vm;
 
     try
     {
         po::store(po::parse_command_line(argc, argv, desc), vm);
+
+        if (vm.count("config") > 0)
+        {
+            auto config_name(vm["config"].as<std::string>());
+            std::ifstream ifs(config_name.c_str());
+
+            if (ifs.fail())
+            {
+                throw po::error("Failed to open config file");
+            }
+
+            po::store(po::parse_config_file(ifs, gn_desc), vm);
+        }
+
         po::notify(vm);
     }
     catch (const po::error &ex)

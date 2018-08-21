@@ -38,9 +38,12 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
                 return rp;
             });
 
+    buffer_definitions.emplace("WIDTH", std::to_string(width));
+    buffer_definitions.emplace("HEIGHT", std::to_string(height));
+
     // Create the image buffer
     auto imageBuffer(std::make_shared<shadertoy::buffers::toy_buffer>("image"));
-    imageBuffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gradient.glsl");
+    imageBuffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gn.glsl");
     image_buffer = imageBuffer;
 
     // Add the image buffer to the swap chain, at the given size
