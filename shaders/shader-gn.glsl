@@ -227,8 +227,17 @@ void pg_seed(inout point_gen_state this_, ivec2 nc, inout int splats, out int ex
 
 void pg_point(inout point_gen_state this_, out vec4 pt)
 {
+    // Generate random position
     pt.xy = prng_rand2(this_.state);
+
+    // Generate random weight and phase
+#if WEIGHTS != WEIGHTS_NONE && defined(RANDOM_PHASE)
     pt.zw = prng_rand2(this_.state);
+#elif WEIGHTS != WEIGHTS_NONE && !defined(RANDOM_PHASE)
+    pt.z = 2. * prng_rand01(this_.state) - 1.;
+#elif WEIGHTS == WEIGHTS_NONE && defined(RANDOM_PHASE)
+    pt.w = 2. * prng_rand01(this_.state) - 1.;
+#endif
 
 #if WEIGHTS == WEIGHTS_NONE
     pt.z = 1.;
@@ -239,7 +248,7 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
     pt.z = sign(pt.z);
 #endif
 
-#if RANDOM_PHASE
+#ifdef RANDOM_PHASE
     pt.w *= M_PI;
 #else
     pt.w = 0.;
