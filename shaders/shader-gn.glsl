@@ -9,6 +9,7 @@
 #define WEIGHTS_NONE 2
 
 #define POINTS_WHITE 0
+#define POINTS_STRATIFIED 1
 
 #define PRNG_LCG 0
 #define PRNG_XOROSHIRO 1
@@ -204,7 +205,7 @@ int prng_poisson(inout prng_state this_, float mean) {
     return em;
 }
 
-#if POINTS == POINTS_WHITE
+#if POINTS <= POINTS_STRATIFIED
 // White noise generator
 struct point_gen_state {
     prng_state state;
@@ -218,8 +219,10 @@ void pg_seed(inout point_gen_state this_, ivec2 nc, inout int splats, out int ex
     // The expected number of points for given splats is splats
     expected_splats = splats;
 
+#if POINTS == POINTS_WHITE
     // Poisson
     splats = prng_poisson(this_.state, splats);
+#endif
 }
 
 void pg_point(inout point_gen_state this_, out vec4 pt)
