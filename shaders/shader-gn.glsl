@@ -181,13 +181,26 @@ vec2 prng_rand2(inout prng_state this_) {
 #endif
 
 int prng_poisson(inout prng_state this_, float mean) {
-    float g = exp(-mean);
     int em = 0;
-    float t = prng_rand01(this_);
-    while (t > g) {
-        ++em;
-        t *= prng_rand01(this_);
+
+    if (mean < 50.)
+    {
+        // Knuth
+        float g = exp(-mean);
+        float t = prng_rand01(this_);
+        while (t > g) {
+            ++em;
+            t *= prng_rand01(this_);
+        }
     }
+    else
+    {
+        // Gaussian approximation
+        vec2 u = .5 * prng_rand2(this_) + .5;
+        float v = sqrt(-2. * log(u.x)) * cos(2. * M_PI * u.y);
+        em = int((v * sqrt(mean)) + mean + .5);
+    }
+
     return em;
 }
 
