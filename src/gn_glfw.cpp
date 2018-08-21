@@ -12,6 +12,47 @@
 
 using shadertoy::utils::log;
 
+unsigned int sqrti(unsigned int n)
+{
+    unsigned int op = n;
+    unsigned int res = 0;
+    unsigned int one = 1u << 30;
+
+    one >>= __builtin_clz(op) & ~0x3;
+
+    while (one != 0)
+    {
+        if (op >= res + one)
+        {
+            op = op - (res + one);
+            res = res + (one << 1);
+        }
+
+        res >>= 1;
+        one >>= 2;
+    }
+
+    if (op > res)
+    {
+        // res++;
+    }
+
+    return res;
+}
+
+int splats_sqrti(int splats)
+{
+    return sqrti(splats);
+}
+
+int splats_hex_sqrti(int splats)
+{
+    splats = splats / 2;
+    if (splats == 0)
+        splats = 1;
+    return sqrti(splats);
+}
+
 gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines)
     : context(),
     chain(),
@@ -40,6 +81,18 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
 
     buffer_definitions.emplace("WIDTH", std::to_string(width));
     buffer_definitions.emplace("HEIGHT", std::to_string(height));
+
+    // Define SPLATS_SQRTI if possible
+    auto it = buffer_definitions.find("SPLATS");
+    if (it != buffer_definitions.end())
+    {
+        auto splats = std::atoi(it->second.c_str());
+        if (splats != 0)
+        {
+            buffer_definitions.emplace("SPLATS_SQRTI", std::to_string(splats_sqrti(splats)));
+            buffer_definitions.emplace("SPLATS_HEX_SQRTI", std::to_string(splats_hex_sqrti(splats)));
+        }
+    }
 
     // Create the image buffer
     auto imageBuffer(std::make_shared<shadertoy::buffers::toy_buffer>("image"));

@@ -10,6 +10,10 @@
 
 #define POINTS_WHITE 0
 #define POINTS_STRATIFIED 1
+#define POINTS_JITTERED 2
+#define POINTS_HEX_JITTERED 3
+#define POINTS_GRID 4
+#define POINTS_HEX_GRID 5
 
 #define PRNG_LCG 0
 #define PRNG_XOROSHIRO 1
@@ -211,12 +215,13 @@ struct point_gen_state {
     prng_state state;
 };
 
-void pg_seed(inout point_gen_state this_, ivec2 nc, inout int splats, out int expected_splats)
+void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expected_splats)
 {
     uint seed = uint(nc.x * TILE_COUNT.x + nc.y + 1 + RANDOM_SEED);
     prng_seed(this_.state, seed);
 
     // The expected number of points for given splats is splats
+    splats = SPLATS;
     expected_splats = splats;
 
 #if POINTS == POINTS_WHITE
@@ -254,7 +259,164 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
     pt.w = 0.;
 #endif
 }
+#elif POINTS <= POINTS_HEX_GRID
+#define HAS_JITTERED_GRID (POINTS < POINTS_GRID)
+#define HAS_HEX_GRID (POINTS == POINTS_HEX_JITTERED || POINTS == POINTS_HEX_GRID)
+
+// Grid point generator
+struct point_gen_state {
+    prng_state prng;
+
+    uint ic;
+    uint c;
+#if !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI)
+    uint splats;
+    uint dx;
+    uint dy;
+
+#define STATE_SPLATS(this_) this_.splats
+#define STATE_DX(this_) this_.dx
+#define STATE_DY(this_) this_.dy
+#else /* !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI) */
+#define SPLATS_SPLATS ((HAS_HEX_GRID)?((SPLATS/2) == 0?1:(SPLATS/2)):(SPLATS))
+#if HAS_HEX_GRID
+#define SPLATS_DX SPLATS_HEX_SQRTI
+#else /* HAS_HEX_GRID */
+#define SPLATS_DX SPLATS_SQRTI
+#endif /* HAS_HEX_GRID */
+#define SPLATS_DY ((SPLATS_SPLATS - (SPLATS_DX * SPLATS_DX)) / SPLATS_DX + SPLATS_DX)
+
+#define STATE_SPLATS(this_) (SPLATS_DX * SPLATS_DY)
+#define STATE_DX(this_) SPLATS_DX
+#define STATE_DY(this_) SPLATS_DY
+#endif /* !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI) */
+};
+
+#if !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI)
+uint sqrti(uint n)
+{
+    uint op = n;
+    uint res = 0;
+    uint one = 1u << 30;
+
+    one >>= (31 - findMSB(op)) & ~0x3;
+
+    while (one != 0)
+    {
+        if (op >= res + one)
+        {
+            op = op - (res + one);
+            res = res + (one << 1);
+        }
+
+        res >>= 1;
+        one >>= 2;
+    }
+
+    if (op > res)
+    {
+        //res++;
+    }
+
+    return res;
+}
+#endif /* !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI) */
+
+void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expected_splats)
+{
+    uint seed = uint(nc.x * TILE_COUNT.x + nc.y + 1 + RANDOM_SEED);
+    prng_seed(this_.prng, seed);
+
+#ifndef SPLATS_SPLATS
+    splats = SPLATS;
+
+#if HAS_HEX_GRID
+    splats = splats / 2;
+    if (splats == 0)
+        splats = 1;
+#endif /* HAS_HEX_GRID */
+
+    this_.dx = sqrti(splats);
+    this_.dy = (splats - (this_.dx * this_.dx)) / this_.dx + this_.dx;
+
+    expected_splats = splats = int(this_.dx * this_.dy);
+
+    this_.splats = splats;
+#else
+    expected_splats = splats = int(SPLATS_DX * SPLATS_DY);
+#endif /* SPLATS_SPLATS */
+
+    this_.ic = (seed >> 2) % splats;
+    this_.c = this_.ic;
+
+#if HAS_HEX_GRID
+    // An hexagonal grid at that scale is 2 times denser
+    splats = expected_splats *= 2;
+#endif /* HAS_HEX_GRID */
+}
+
+void pg_point(inout point_gen_state this_, out vec4 pt)
+{
+#if HAS_JITTERED_GRID
+    // Generate random position
+    pt.xy = prng_rand2(this_.prng);
+#else
+    pt.xy = vec2(0.);
+#endif /* HAS_JITTERED_GRID */
+
+#if HAS_HEX_GRID
+#if !HAS_JITTERED_GRID
+    pt.xy = vec2(0., 1.);
+#endif /* !HAS_JITTERED_GRID */
+
+    // Apply triangle transform
+    pt.xy = vec2(.25 * (pt.x - pt.y), .5 * abs(pt.x + pt.y));
+    if ((this_.c - this_.ic) >= STATE_SPLATS(this_))
+    {
+        pt.x += 1.;
+        pt.y = -pt.y;
+    }
+#endif /* HAS_HEX_GRID */
+
+    // pt.xy is in [0, tsx] x [0, tsy] after these lines
+    pt.xy = pt.xy / 2.f + vec2(.5f);
+    pt.xy = pt.xy / vec2(STATE_DX(this_), STATE_DY(this_));
+
+    // move pt.xy to subcell
+    pt.xy += vec2((this_.c % STATE_SPLATS(this_)) / STATE_DY(this_), (this_.c % STATE_SPLATS(this_)) % STATE_DY(this_)) / vec2(STATE_DX(this_), STATE_DY(this_));
+
+    // back to [-1, 1]
+    pt.xy = 2. * (pt.xy - vec2(.5f));
+
+    // next cell
+    this_.c++;
+
+    // Generate random weight and phase
+#if WEIGHTS != WEIGHTS_NONE && defined(RANDOM_PHASE)
+    pt.zw = prng_rand2(this_.prng);
+#elif WEIGHTS != WEIGHTS_NONE && !defined(RANDOM_PHASE)
+    pt.z = 2. * prng_rand01(this_.prng) - 1.;
+#elif WEIGHTS == WEIGHTS_NONE && defined(RANDOM_PHASE)
+    pt.w = 2. * prng_rand01(this_.prng) - 1.;
 #endif
+
+#if WEIGHTS == WEIGHTS_NONE
+    pt.z = 1.;
+#elif WEIGHTS == WEIGHTS_UNIFORM
+    // Compensate loss of variance compared to Bernoulli
+    pt.z *= sqrt(3.);
+#elif WEIGHTS == WEIGHTS_BERNOULLI
+    pt.z = sign(pt.z);
+#endif
+
+#ifdef RANDOM_PHASE
+    pt.w *= M_PI;
+#else
+    pt.w = 0.;
+#endif
+}
+
+#endif /* POINTS */
 
 void mainImage(out vec4 O, in vec2 U)
 {
@@ -277,7 +439,7 @@ void mainImage(out vec4 O, in vec2 U)
             vec2 center = TILE_SIZE * (vec2(cell) + .5);
 
             // Seed the point generator
-            int splats = SPLATS;
+            int splats;
             int expected;
             point_gen_state pg_state;
             pg_seed(pg_state, nc, splats, expected);
