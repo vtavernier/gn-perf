@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
          "\t - PRNG=type: type of the PRNG to use:\n"
          "\t   - PRNG_LCG: linear congruential generator (default)\n"
          "\t   - PRNG_XOROSHIRO: SIMD xoroshiro64** generator\n"
-         "\t   - PRNG_HASH: integer hash generator (2^8 period)\n");
+         "\t   - PRNG_HASH: integer hash generator (2^8 period)\n"
+         "\t   - PRNG_NONE: constant generator for debugging\n");
 
     po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
     desc.add_options()

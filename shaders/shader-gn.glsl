@@ -18,6 +18,7 @@
 #define PRNG_LCG 0
 #define PRNG_XOROSHIRO 1
 #define PRNG_HASH 2
+#define PRNG_NONE 3
 
 #ifndef WIDTH
 #define WIDTH int(iResolution.x)
@@ -194,9 +195,24 @@ vec2 prng_rand2(inout prng_state this_) {
     return vec2(prng_rand1(this_), prng_rand1(this_));
 }
 
+#elif PRNG == PRNG_NONE
+struct prng_state { uint x_; };
+
+void prng_seed(inout prng_state this_, uint seed) {
+}
+
+float prng_rand1(inout prng_state this_) {
+    return 0.;
+}
+
+vec2 prng_rand2(inout prng_state this_) {
+    return vec2(0.);
+}
+
 #endif
 
 int prng_poisson(inout prng_state this_, float mean) {
+#if PRNG != PRNG_NONE
     int em = 0;
 
     if (mean < 50.)
@@ -218,6 +234,9 @@ int prng_poisson(inout prng_state this_, float mean) {
     }
 
     return em;
+#else
+    return int(mean + .5);
+#endif
 }
 
 #if POINTS <= POINTS_STRATIFIED
