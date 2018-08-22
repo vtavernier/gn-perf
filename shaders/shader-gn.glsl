@@ -100,16 +100,12 @@ void prng_seed(inout prng_state this_, uint seed) {
     this_.x_ = hash(seed);
 }
 
-uint prng_rand(inout prng_state this_) {
-    return this_.x_ *= 3039177861u;
-}
-
-float prng_rand01(inout prng_state this_) {
-    return prng_rand(this_) / float(4294967295u);
+float prng_rand1(inout prng_state this_) {
+    return (this_.x_ *= 3039177861u) / float(4294967295u);
 }
 
 vec2 prng_rand2(inout prng_state this_) {
-    return 2. * vec2(prng_rand01(this_), prng_rand01(this_)) - 1.;
+    return vec2(prng_rand1(this_), prng_rand1(this_));
 }
 
 #elif PRNG == PRNG_XOROSHIRO
@@ -171,16 +167,12 @@ void prng_seed(inout prng_state this_, uint seed) {
     this_.x_ = hash4(seed << 4 | uvec4(0, 1, 2, 3));
 }
 
-uint prng_rand(inout prng_state this_) {
-    return next(this_.x_.xy);
-}
-
-float prng_rand01(inout prng_state this_) {
-    return tofloat(prng_rand(this_));
+float prng_rand1(inout prng_state this_) {
+    return tofloat(next(this_.x_.xy));
 }
 
 vec2 prng_rand2(inout prng_state this_) {
-    return 2. * tofloat2(next2(this_.x_)) - 1.;
+    return tofloat2(next2(this_.x_));
 }
 
 #endif
@@ -192,16 +184,16 @@ int prng_poisson(inout prng_state this_, float mean) {
     {
         // Knuth
         float g = exp(-mean);
-        float t = prng_rand01(this_);
+        float t = prng_rand1(this_);
         while (t > g) {
             ++em;
-            t *= prng_rand01(this_);
+            t *= prng_rand1(this_);
         }
     }
     else
     {
         // Gaussian approximation
-        vec2 u = .5 * prng_rand2(this_) + .5;
+        vec2 u = prng_rand2(this_);
         float v = sqrt(-2. * log(u.x)) * cos(2. * M_PI * u.y);
         em = int((v * sqrt(mean)) + mean + .5);
     }
@@ -233,15 +225,15 @@ void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expe
 void pg_point(inout point_gen_state this_, out vec4 pt)
 {
     // Generate random position
-    pt.xy = prng_rand2(this_.state);
+    pt.xy = 2. * prng_rand2(this_.state) - 1.;
 
     // Generate random weight and phase
 #if WEIGHTS != WEIGHTS_NONE && defined(RANDOM_PHASE)
-    pt.zw = prng_rand2(this_.state);
+    pt.zw = 2. * prng_rand2(this_.state) - 1.;
 #elif WEIGHTS != WEIGHTS_NONE && !defined(RANDOM_PHASE)
-    pt.z = 2. * prng_rand01(this_.state) - 1.;
+    pt.z = 2. * prng_rand1(this_.state) - 1.;
 #elif WEIGHTS == WEIGHTS_NONE && defined(RANDOM_PHASE)
-    pt.w = 2. * prng_rand01(this_.state) - 1.;
+    pt.w = 2. * prng_rand1(this_.state) - 1.;
 #endif
 
 #if WEIGHTS == WEIGHTS_NONE
@@ -359,7 +351,7 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
 {
 #if HAS_JITTERED_GRID
     // Generate random position
-    pt.xy = prng_rand2(this_.prng);
+    pt.xy = 2. * prng_rand2(this_.prng) - 1.;
 #else
     pt.xy = vec2(0.);
 #endif /* HAS_JITTERED_GRID */
@@ -393,11 +385,11 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
 
     // Generate random weight and phase
 #if WEIGHTS != WEIGHTS_NONE && defined(RANDOM_PHASE)
-    pt.zw = prng_rand2(this_.prng);
+    pt.zw = 2. * prng_rand2(this_.prng) - 1.;
 #elif WEIGHTS != WEIGHTS_NONE && !defined(RANDOM_PHASE)
-    pt.z = 2. * prng_rand01(this_.prng) - 1.;
+    pt.z = 2. * prng_rand1(this_.prng) - 1.;
 #elif WEIGHTS == WEIGHTS_NONE && defined(RANDOM_PHASE)
-    pt.w = 2. * prng_rand01(this_.prng) - 1.;
+    pt.w = 2. * prng_rand1(this_.prng) - 1.;
 #endif
 
 #if WEIGHTS == WEIGHTS_NONE
