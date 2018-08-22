@@ -9,4 +9,7 @@ define = POINTS=POINTS_[% points %]
 define = WEIGHTS=WEIGHTS_[% weights %]
 define = PRNG=PRNG_[% prng %]
 output = build/[% fn %]
+[% IF ksin %]
+define = KSIN
+[% END %]
 

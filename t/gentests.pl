@@ -13,21 +13,24 @@ my $tt = Template->new({
 
 my $i = 0;
 for my $points (qw/WHITE STRATIFIED JITTERED HEX_JITTERED GRID HEX_GRID/) {
-    for my $weights (qw/UNIFORM BERNOULLI NONE/) {
-        for my $prng (qw/LCG XOROSHIRO HASH NONE/) {
-            my $fn = sprintf("%03d_%s-%s-%s",
-                $i++, map({ lc } $points, $weights, $prng));
-            say $fn;
+    for my $weights (qw/UNIFORM BERNOULLI NONE RANDPHASE/) {
+        for my $prng (qw/LCG XOROSHIRO HASH/) {
+            for my $kernel (qw/COS SIN/) {
+                my $fn = sprintf("%03d_%s-%s-%s-%s",
+                    $i++, map({ lc } $points, $weights, $prng, $kernel));
+                say $fn;
 
-            open my $fh, '>', "$FindBin::Bin/$fn.t";
-            $tt->process("test.tt", {
-                    points => $points,
-                    weights => $weights,
-                    prng => $prng,
-                    fn => $fn
-                }, $fh) || die $tt->error(), "\n";
-            close $fh;
-            chmod 0755, "$FindBin::Bin/$fn.t";
+                open my $fh, '>', "$FindBin::Bin/$fn.t";
+                $tt->process("test.tt", {
+                        points => $points,
+                        weights => $weights eq 'RANDPHASE' ? 'NONE' : $weights,
+                        prng => $prng,
+                        ksin => $kernel eq 'SIN',
+                        fn => $fn
+                    }, $fh) || die $tt->error(), "\n";
+                close $fh;
+                chmod 0755, "$FindBin::Bin/$fn.t";
+            }
         }
     }
 }
