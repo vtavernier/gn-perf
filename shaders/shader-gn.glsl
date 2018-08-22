@@ -240,24 +240,34 @@ int prng_poisson(inout prng_state this_, float mean) {
 }
 
 #if POINTS <= POINTS_STRATIFIED
+#if POINTS == POINTS_WHITE
+#define PG_SPLATS(pg_state, splats) splats
+#else
+#define PG_SPLATS(pg_state, splats) SPLATS
+#endif
+
 // White noise generator
 struct point_gen_state {
     prng_state state;
 };
 
-void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expected_splats)
+void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats)
 {
     uint seed = uint(nc.x * TILE_COUNT.x + nc.y + 1 + RANDOM_SEED);
     prng_seed(this_.state, seed);
 
     // The expected number of points for given splats is splats
     splats = SPLATS;
-    expected_splats = splats;
 
 #if POINTS == POINTS_WHITE
     // Poisson
     splats = prng_poisson(this_.state, splats);
 #endif
+}
+
+float pg_expected()
+{
+    return float(SPLATS);
 }
 
 void pg_point(inout point_gen_state this_, out vec4 pt)
@@ -304,6 +314,7 @@ struct point_gen_state {
     uint dx;
     uint dy;
 
+#define PG_SPLATS(pg_state, splats) splats
 #define STATE_SPLATS(this_) this_.splats
 #define STATE_DX(this_) this_.dx
 #define STATE_DY(this_) this_.dy
@@ -311,8 +322,10 @@ struct point_gen_state {
 #define SPLATS_SPLATS ((HAS_HEX_GRID)?((SPLATS/2) == 0?1:(SPLATS/2)):(SPLATS))
 #if HAS_HEX_GRID
 #define SPLATS_DX SPLATS_HEX_SQRTI
+#define PG_SPLATS(pg_state, splats) (2 * SPLATS_DX * SPLATS_DY)
 #else /* HAS_HEX_GRID */
 #define SPLATS_DX SPLATS_SQRTI
+#define PG_SPLATS(pg_state, splats) (SPLATS_DX * SPLATS_DY)
 #endif /* HAS_HEX_GRID */
 #define SPLATS_DY ((SPLATS_SPLATS - (SPLATS_DX * SPLATS_DX)) / SPLATS_DX + SPLATS_DX)
 
@@ -352,7 +365,7 @@ uint sqrti(uint n)
 }
 #endif /* !defined(SPLATS_SQRTI) || !defined(SPLATS_HEX_SQRTI) */
 
-void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expected_splats)
+void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats)
 {
     uint seed = uint(nc.x * TILE_COUNT.x + nc.y + 1 + RANDOM_SEED);
     prng_seed(this_.prng, seed);
@@ -369,11 +382,11 @@ void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expe
     this_.dx = sqrti(splats);
     this_.dy = (splats - (this_.dx * this_.dx)) / this_.dx + this_.dx;
 
-    expected_splats = splats = int(this_.dx * this_.dy);
+    splats = int(this_.dx * this_.dy);
 
     this_.splats = splats;
 #else
-    expected_splats = splats = int(SPLATS_DX * SPLATS_DY);
+    splats = int(SPLATS_DX * SPLATS_DY);
 #endif /* SPLATS_SPLATS */
 
     this_.ic = (seed >> 2) % splats;
@@ -381,8 +394,28 @@ void pg_seed(inout point_gen_state this_, ivec2 nc, out int splats, out int expe
 
 #if HAS_HEX_GRID
     // An hexagonal grid at that scale is 2 times denser
-    splats = expected_splats *= 2;
+    splats *= 2;
 #endif /* HAS_HEX_GRID */
+}
+
+float pg_expected()
+{
+#ifndef SPLATS_SPLATS
+    int splats = SPLATS;
+
+#if HAS_HEX_GRID
+    splats = splats / 2;
+    if (splats == 0)
+        splats = 1;
+#endif /* HAS_HEX_GRID */
+
+    int dx = sqrti(splats);
+    int dy = (splats - (dx * dx)) / dx + dx;
+
+    return float(dx * dy);
+#else
+    return float(SPLATS_DX * SPLATS_DY);
+#endif
 }
 
 void pg_point(inout point_gen_state this_, out vec4 pt)
@@ -470,11 +503,10 @@ void mainImage(out vec4 O, in vec2 U)
 
             // Seed the point generator
             int splats;
-            int expected;
             point_gen_state pg_state;
-            pg_seed(pg_state, nc, splats, expected);
+            pg_seed(pg_state, nc, splats);
 
-            for (int i = 0; i < splats; ++i)
+            for (int i = 0; i < PG_SPLATS(pg_state, splats); ++i)
             {
                 // Get a point properties
                 vec4 props;
@@ -487,11 +519,11 @@ void mainImage(out vec4 O, in vec2 U)
                 props.xy = (U - props.xy) / TILE_SIZE;
 
                 // Compute contribution
-                O += props.z * h(props.xy, props.w) / sqrt(float(expected));
+                O += props.z * h(props.xy, props.w);
             }
         }
     }
 
     // [0, 1] range
-    O = .5 + .5 * O;
+    O = .5 + .5 * O / sqrt(pg_expected());
 }
