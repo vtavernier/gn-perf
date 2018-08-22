@@ -29,7 +29,7 @@ public:
     }
 
     template<typename Callable>
-    std::string summary(bool raw_output, bool &output_header, const std::string &name, Callable cb)
+    std::string summary(const char *prefix, bool raw_output, bool &output_header, const std::string &name, Callable cb) const
     {
         std::stringstream ss;
         auto avg = sum / cnt,
@@ -37,6 +37,7 @@ public:
 
         if (!raw_output && !output_header)
         {
+            ss << prefix;
             ss << std::setw(10) << "mes" << std::setw(0) << "\t";
             ss << std::setw(10) << "avg" << std::setw(0) << "\t";
             ss << std::setw(10) << "sdd" << std::setw(0) << "\t";
@@ -47,6 +48,7 @@ public:
         }
 
         auto w(raw_output ? 0 : 10);
+        ss << prefix;
         ss << std::setw(w) << name << std::setw(0) << "\t";
         ss << std::setw(w) << cb(avg) << std::setw(0) << "\t";
         ss << std::setw(w) << sdd / avg * cb(avg) << std::setw(0) << "\t";
@@ -57,9 +59,9 @@ public:
         return ss.str();
     }
 
-    inline std::string summary(bool raw_output, bool &output_header, const std::string &name)
+    inline std::string summary(const char *prefix, bool raw_output, bool &output_header, const std::string &name) const
     {
-        return summary(raw_output, output_header, name, [](auto x) { return x; });
+        return summary(prefix, raw_output, output_header, name, [](auto x) { return x; });
     }
 
     inline stat_acc()

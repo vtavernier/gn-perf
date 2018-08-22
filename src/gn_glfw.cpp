@@ -55,7 +55,7 @@ int splats_hex_sqrti(int splats)
     return sqrti(splats);
 }
 
-gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines)
+gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines, bool visible)
     : context(),
     chain(),
     render_size(width, height)
@@ -107,11 +107,14 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
     image_buffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gn.glsl");
 
     // Add the image buffer to the swap chain, at the given size
-    // The default_framebuffer policy makes this buffer draw directly to
-    // the window instead of using a texture that is then copied to the
-    // screen.
     chain.emplace_back(image_buffer, shadertoy::make_size_ref(render_size),
-                       shadertoy::member_swap_policy::default_framebuffer);
+                       shadertoy::member_swap_policy::double_buffer);
+
+    if (visible)
+    {
+        // Render the result to the screen
+        chain.emplace_back<shadertoy::members::screen_member>(shadertoy::make_size_ref(render_size));
+    }
 
     // Initialize context
     context.init(chain);

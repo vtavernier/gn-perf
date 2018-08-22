@@ -11,6 +11,8 @@
 
 #include <signal.h>
 
+#include <png++/png.hpp>
+
 #include "gn_perf_config.hpp"
 #include "stat_acc.hpp"
 #include "gn_glfw.hpp"
@@ -27,12 +29,71 @@ namespace fs = boost::filesystem;
 using shadertoy::utils::log;
 using shadertoy::gl::gl_call;
 
+template <typename inttype> inttype topx(float value, float k = 1.f)
+{
+	float scaled_value = (((value * 2.f - 1.f) * k) / 2.f + .5f) * std::numeric_limits<inttype>::max();
+
+	// Clamp
+	if (scaled_value > std::numeric_limits<inttype>::max())
+		scaled_value = static_cast<float>(std::numeric_limits<inttype>::max());
+	else if (scaled_value < 0.0f)
+		scaled_value = 0.0f;
+
+	return static_cast<inttype>(scaled_value);
+}
+
+void write_output(const std::string &output_basename, const stat_acc &time_ms, const std::shared_ptr<shadertoy::members::basic_member> &last_result, int width, int height, const std::string &include_stat, bool raw_output, const std::string &identifier)
+{
+    log::shadertoy()->info("Writing output at {}", output_basename);
+
+    // Fetch from OpenGL
+    std::vector<float> image_data(width * height * 4);
+
+    // Get the texture
+    auto texture = last_result->output();
+    assert(texture);
+    texture->get_image(0, GL_RGBA, GL_FLOAT, sizeof(float) * image_data.size(), image_data.data());
+
+    // Write image
+    png::image<png::rgba_pixel_16> image(width, height);
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            float *pi = &image_data[4 * (y * width + x)];
+            image.set_pixel(x, y, png::rgba_pixel_16(
+                        topx<uint16_t>(pi[0]),
+                        topx<uint16_t>(pi[1]),
+                        topx<uint16_t>(pi[2]),
+                        std::numeric_limits<uint16_t>::max()));
+        }
+    }
+
+    image.write(output_basename + ".png");
+
+    // Write details
+    std::ofstream ofs((output_basename + ".txt").c_str());
+    assert(!ofs.fail());
+
+    // Print state identifier
+    if (!raw_output)
+    {
+        ofs << "# " << identifier << std::endl;
+    }
+
+    bool output_header = false;
+    if (include_stat.find("t_ms") != std::string::npos)
+        ofs << time_ms.summary("", raw_output, output_header, "t_ms").c_str() << std::endl;
+    if (include_stat.find("fps") != std::string::npos)
+        ofs << time_ms.summary("", raw_output, output_header, "fps", [](auto x) { return 1.0e3 / x; }).c_str() << std::endl;
+    if (include_stat.find("mpxps") != std::string::npos)
+        ofs << time_ms.summary("", raw_output, output_header, "mpxps", [width, height](auto x) { return 1.0e-3 * width * height / x; }).c_str() << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
     int width, height, size;
     long long samples, warmup_samples;
-    bool st_silent, all_silent, raw_output, sync_anyways;
-    std::string include_stat;
+    bool st_silent, all_silent, raw_output, sync_anyways, test_mode;
+    std::string include_stat, output;
     std::vector<std::string> defines;
 
     po::options_description gn_desc("Noise options");
@@ -40,8 +101,9 @@ int main(int argc, char *argv[])
         ("width", po::value(&width)->default_value(640), "Width of the rendering")
         ("height", po::value(&height)->default_value(480), "Height of the rendering")
         ("size,s", po::value(&size)->default_value(-1), "Size (overrides width and height) of the rendering")
-        ("warmup,W", po::value(&warmup_samples)->default_value(64), "Number of samples to warm-up the measurements")
+        ("warmup,W", po::value(&warmup_samples)->default_value(-1), "Number of samples to warm-up the measurements")
         ("samples,n", po::value(&samples)->default_value(0), "Number of samples to collect for statistics")
+        ("output,o", po::value(&output)->default_value(""), "Output path for the control frame")
         ("define,D", po::value(&defines)->multitoken()->composing(), "Preprocessor definitions for the shader\n"
          "The following values are supported: \n"
          "\t * SPLATS=n: number of splats per cell\n"
@@ -78,15 +140,19 @@ int main(int argc, char *argv[])
         ("include-stat,I", po::value(&include_stat)->default_value("t_ms,fps,mpxps"), "Stats to include in the output")
         ("raw,r", po::bool_switch(&raw_output)->default_value(false), "Raw value output (no header nor size). Only applies to final output")
         ("sync,S", po::bool_switch(&sync_anyways)->default_value(false), "Force vsync even if measuring performance")
+        ("test,T", po::bool_switch(&test_mode)->default_value(false), "TAP self-test mode")
         ("help,h", "Show this help message");
 
     desc.add(gn_desc);
+
+    po::positional_options_description po_desc;
+    po_desc.add("config", 1);
 
     po::variables_map vm;
 
     try
     {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::store(po::command_line_parser(argc, argv).options(desc).positional(po_desc).run(), vm);
 
         if (vm.count("config") > 0)
         {
@@ -121,6 +187,20 @@ int main(int argc, char *argv[])
         width = height = size;
     }
 
+    if (warmup_samples < 0 && samples != 0)
+    {
+        warmup_samples = 64;
+    }
+    else
+    {
+        warmup_samples = 0;
+    }
+
+    if (test_mode)
+    {
+        all_silent = true;
+    }
+
     if (all_silent)
     {
         freopen("/dev/null", "w", stderr);
@@ -139,10 +219,11 @@ int main(int argc, char *argv[])
         log::shadertoy()->info("About to collect {} samples", samples);
 
 
-    return glfw_run(width, height, samples == 0 || sync_anyways ? 1 : 0, [&](auto *window)
+    bool visible = samples == 0 || sync_anyways ? 1 : 0;
+    return glfw_run(width, height, visible, [&](auto *window)
     {
         // Create the context and swap chain
-        gn_perf_ctx ctx(width, height, defines);
+        gn_perf_ctx ctx(width, height, defines, visible);
         auto &context(ctx.context);
         auto &chain(ctx.chain);
 
@@ -159,6 +240,7 @@ int main(int argc, char *argv[])
 
         signal(SIGINT, sigint_handler);
 
+        std::shared_ptr<shadertoy::members::basic_member> last_result;
         while (!glfwWindowShouldClose(window) && !sigint_signaled)
         {
             // Poll events
@@ -177,7 +259,7 @@ int main(int argc, char *argv[])
             gl_call(glViewport, 0, 0, ctx.render_size.width, ctx.render_size.height);
 
             // Render the swap chain
-            context.render(chain);
+            last_result = context.render(chain);
 
             // Buffer swapping
             glfwSwapBuffers(window);
@@ -218,19 +300,32 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "\n");
 
+        // Write output data
+        if (!output.empty())
+        {
+            write_output(output, time_ms, last_result, ctx.render_size.width, ctx.render_size.height, include_stat, raw_output, ctx.identifier);
+        }
+
+        // TODO: actually test something
+        const char *test_prefix = test_mode ? "# " : "";
+        if (test_mode)
+        {
+            printf("1..1\nok 1\n");
+        }
+
         // Print state identifier
         if (!raw_output)
         {
-            printf("# %s\n", ctx.identifier.c_str());
+            printf("%s# %s\n", test_prefix, ctx.identifier.c_str());
         }
 
         bool output_header = false;
         if (include_stat.find("t_ms") != std::string::npos)
-            printf("%s\n", time_ms.summary(raw_output, output_header, "t_ms").c_str());
+            printf("%s\n", time_ms.summary(test_prefix, raw_output, output_header, "t_ms").c_str());
         if (include_stat.find("fps") != std::string::npos)
-            printf("%s\n", time_ms.summary(raw_output, output_header, "fps", [](auto x) { return 1.0e3 / x; }).c_str());
+            printf("%s\n", time_ms.summary(test_prefix, raw_output, output_header, "fps", [](auto x) { return 1.0e3 / x; }).c_str());
         if (include_stat.find("mpxps") != std::string::npos)
-            printf("%s\n", time_ms.summary(raw_output, output_header, "mpxps", [&ctx](auto x) { return 1.0e-3 * ctx.render_size.width * ctx.render_size.height / x; }).c_str());
+            printf("%s\n", time_ms.summary(test_prefix, raw_output, output_header, "mpxps", [&ctx](auto x) { return 1.0e-3 * ctx.render_size.width * ctx.render_size.height / x; }).c_str());
     });
 }
 

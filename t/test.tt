@@ -1,0 +1,12 @@
+#!build/gn_perf -T
+# vim: ft=dosini
+size = 512
+
+define = SPLATS=32
+define = F0=20
+define = TILE_SIZE=16
+define = POINTS=POINTS_[% points %]
+define = WEIGHTS=WEIGHTS_[% weights %]
+define = PRNG=PRNG_[% prng %]
+output = build/[% fn %]
+
