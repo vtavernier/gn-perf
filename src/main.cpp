@@ -60,9 +60,14 @@ int main(int argc, char *argv[])
          "\t - POINTS=type: type of the point distribution:\n"
          "\t   - POINTS_WHITE: white (Poisson) points (default)\n"
          "\t   - POINTS_STRATIFIED: stratified points\n"
+         "\t   - POINTS_JITTERED: jittered rectangular grid points\n"
+         "\t   - POINTS_HEX_JITTERED: jittered triangular grid points\n"
+         "\t   - POINTS_GRID: regular rectangular grid points\n"
+         "\t   - POINTS_HEX_GRID: regular triangular grid points\n"
          "\t - PRNG=type: type of the PRNG to use:\n"
          "\t   - PRNG_LCG: linear congruential generator (default)\n"
-         "\t   - PRNG_XOROSHIRO: SIMD xoroshiro64** generator");
+         "\t   - PRNG_XOROSHIRO: SIMD xoroshiro64** generator\n"
+         "\t   - PRNG_HASH: integer hash generator (2^8 period)\n");
 
     po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
     desc.add_options()
