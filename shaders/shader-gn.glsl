@@ -80,17 +80,23 @@ float h(vec2 x, float phase) {
 }
 
 // Hashing function
+uvec4 hash4(uvec4 x);
+
 uint hash(uint x) {
-    x = ((x >> 16) ^ x) * 0x45d9f3bu;
-    x = ((x >> 16) ^ x) * 0x45d9f3bu;
-    x = (x >> 16) ^ x;
-    return x;
+    return hash4(uvec4(x)).x;
+}
+
+uvec2 hash2(uvec2 x) {
+    return hash4(uvec4(x.xyxy)).xy;
 }
 
 uvec4 hash4(uvec4 x) {
-    x = ((x >> 16) ^ x) * 0x45d9f3bu;
-    x = ((x >> 16) ^ x) * 0x45d9f3bu;
-    x = (x >> 16) ^ x;
+    // Wang hash
+    x = (x ^ 61) ^ (x >> 16);
+    x *= 9;
+    x = x ^ (x >> 4);
+    x *= 0x27d4eb2d;
+    x = x ^ (x >> 15);
     return x;
 }
 
