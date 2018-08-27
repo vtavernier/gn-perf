@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
         freopen("/dev/null", "w", stderr);
     }
 
-    log::shadertoy()->set_level(st_silent ? spdlog::level::warn : spdlog::level::debug);
+    log::shadertoy()->set_level(st_silent ? spdlog::level::info : spdlog::level::debug);
 
     log::shadertoy()->info("gn-perf {}", GN_PERF_VERSION);
     log::shadertoy()->info("Base dir {}", GN_PERF_BASE_DIR);
