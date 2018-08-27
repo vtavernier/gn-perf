@@ -22,6 +22,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem program_options)
 find_package(Epoxy REQUIRED)
 find_package(GLFW3 REQUIRED)
 find_package(PNG REQUIRED)
+find_package(NVML)
 find_path(PNGPP_INCLUDE_DIR png++/png.hpp)
 
 # Configure header
@@ -41,5 +42,13 @@ target_link_libraries(gn_perf PRIVATE
     ${Boost_LIBRARIES}
     ${PNG_LIBRARY}
     shadertoy-shared)
+
+if(NVML_FOUND)
+    target_include_directories(gn_perf PRIVATE ${NVML_INCLUDE_DIR})
+    target_link_libraries(gn_perf PRIVATE ${NVML_LIBRARIES})
+    message(STATUS "Using NVML for P-state detection")
+else()
+    message(STATUS "Not using NVML")
+endif()
 
 target_compile_options(gn_perf PRIVATE -Wall -Wno-attributes)

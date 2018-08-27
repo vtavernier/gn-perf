@@ -218,6 +218,33 @@ int main(int argc, char *argv[])
     else
         log::shadertoy()->info("About to collect {} samples", samples);
 
+#if HAS_NVML
+    // We are using the first GPU anyways
+    nvmlDevice_t device;
+    bool nvml_enabled = false;
+
+    if (nvmlInit() == NVML_SUCCESS) {
+        nvml_enabled = true;
+        log::shadertoy()->debug("Initialized NVML");
+    } else {
+        log::shadertoy()->warn("Failed to initialize NVML");
+    }
+
+    if (nvml_enabled && nvmlDeviceGetHandleByIndex(0, &device) == NVML_SUCCESS) {
+        nvmlPstates_t pstate = NVML_PSTATE_UNKNOWN;
+        nvmlDeviceGetPerformanceState(device, &pstate);
+
+        char buf[NVML_DEVICE_NAME_BUFFER_SIZE];
+        if (nvmlDeviceGetName(device, buf, sizeof(buf)) == NVML_SUCCESS) {
+            log::shadertoy()->info("Found NVML device: {}, initial p-state: {}", buf, pstate);
+        } else {
+            log::shadertoy()->info("Found NVML device, initial p-state: {}", pstate);
+        }
+    } else {
+        nvml_enabled = false;
+        log::shadertoy()->warn("Device not found");
+    }
+#endif /* HAS_NVML */
 
     bool visible = samples == 0 || sync_anyways ? 1 : 0;
     return glfw_run(width, height, visible, [&](auto *window)
@@ -264,7 +291,16 @@ int main(int argc, char *argv[])
             // Buffer swapping
             glfwSwapBuffers(window);
 
-            if (warmup_samples <= 0)
+            bool pstate_ok = true;
+#if HAS_NVML
+            // If we have a working NVML, only start measuring at P2 or higher
+            nvmlPstates_t pstate = NVML_PSTATE_UNKNOWN;
+            if (nvml_enabled && nvmlDeviceGetPerformanceState(device, &pstate) == NVML_SUCCESS) {
+                pstate_ok = pstate <= NVML_PSTATE_2;
+            }
+#endif
+
+            if (warmup_samples <= 0 && pstate_ok)
             {
                 // Get the render time for the frame
                 auto elapsed_time = ctx.image_buffer->elapsed_time();
@@ -326,6 +362,10 @@ int main(int argc, char *argv[])
             printf("%s\n", time_ms.summary(test_prefix, raw_output, output_header, "fps", [](auto x) { return 1.0e3 / x; }).c_str());
         if (include_stat.find("mpxps") != std::string::npos)
             printf("%s\n", time_ms.summary(test_prefix, raw_output, output_header, "mpxps", [&ctx](auto x) { return 1.0e-3 * ctx.render_size.width * ctx.render_size.height / x; }).c_str());
+
+#if HAS_NVML
+        nvmlShutdown();
+#endif
     });
 }
 
