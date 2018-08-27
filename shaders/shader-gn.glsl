@@ -100,6 +100,24 @@ uvec4 hash4(uvec4 x) {
     return x;
 }
 
+// Converts an unsigned int to a float in [0,1]
+float tofloat(uint u) {
+    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
+    //return float(u >> 8) * (1. / float(1u << 24));
+
+    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
+    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
+}
+
+// Converts a vector of unsigned ints to floats in [0,1]
+vec2 tofloat2(uvec2 u) {
+    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
+    //return vec2(u >> 8) * (1. / float(1u << 24));
+
+    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
+    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
+}
+
 // LCG random
 #if PRNG == PRNG_LCG
 struct prng_state { uint x_; };
@@ -136,15 +154,6 @@ uint next(inout uvec2 s) {
     return rs;
 }
 
-// Converts an unsigned int to a float in [0,1]
-float tofloat(uint u) {
-    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
-    //return float(u >> 8) * (1. / float(1u << 24));
-
-    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
-    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
-}
-
 uvec2 rotl2(uvec2 x, int k) {
     return (x << k) | (x >> (32 - k));
 }
@@ -161,16 +170,6 @@ uvec2 next2(inout uvec4 s) {
 
     return rs;
 }
-
-// Converts a vector of unsigned ints to floats in [0,1]
-vec2 tofloat2(uvec2 u) {
-    //Slower, but generates all dyadic rationals of the form k / 2^-24 equally
-    //return vec2(u >> 8) * (1. / float(1u << 24));
-
-    //Faster, but only generates all dyadic rationals of the form k / 2^-23 equally
-    return uintBitsToFloat(0x7Fu << 23 | u >> 9) - 1.;
-}
-
 void prng_seed(inout prng_state this_, uint seed) {
     this_.x_ = hash4(seed << 4 | uvec4(0, 1, 2, 3));
 }
