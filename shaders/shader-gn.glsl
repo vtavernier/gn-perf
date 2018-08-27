@@ -103,7 +103,7 @@ void prng_seed(inout prng_state this_, uint seed) {
 }
 
 float prng_rand1(inout prng_state this_) {
-    return (this_.x_ *= 3039177861u) / float(4294967295u);
+    return (this_.x_ *= 3870709308u) / float(4294967291u);
 }
 
 vec2 prng_rand2(inout prng_state this_) {
