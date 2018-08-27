@@ -171,7 +171,7 @@ uvec2 next2(inout uvec4 s) {
     return rs;
 }
 void prng_seed(inout prng_state this_, uint seed) {
-    this_.x_ = hash4(seed << 4 | uvec4(0, 1, 2, 3));
+    this_.x_ = hash4(seed << 2 | uvec4(0, 1, 2, 3));
 }
 
 float prng_rand1(inout prng_state this_) {
