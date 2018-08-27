@@ -18,7 +18,8 @@
 #define PRNG_LCG 0
 #define PRNG_XOROSHIRO 1
 #define PRNG_HASH 2
-#define PRNG_NONE 3
+#define PRNG_XORSHIFT 3
+#define PRNG_NONE 4
 
 #ifndef WIDTH
 #define WIDTH int(iResolution.x)
@@ -198,6 +199,27 @@ float prng_rand1(inout prng_state this_) {
 
 vec2 prng_rand2(inout prng_state this_) {
     return vec2(prng_rand1(this_), prng_rand1(this_));
+}
+#elif PRNG == PRNG_XORSHIFT
+struct prng_state { uvec2 s_; };
+
+uvec2 next(inout uvec2 s) {
+    uint t = s.x ^ (s.x << 23);
+    s.x = s.y;
+    s.y = (s.y ^ (s.y >> 24)) ^ (t ^ (t >> 3));
+    return s;
+}
+
+void prng_seed(inout prng_state this_, uint seed) {
+    this_.s_ = hash2(seed << 1 | uvec2(0, 1));
+}
+
+float prng_rand1(inout prng_state this_) {
+    return float(next(this_.s_).y) / float(4294967295u);
+}
+
+vec2 prng_rand2(inout prng_state this_) {
+    return vec2(next(this_.s_)) / float(4294967295u);
 }
 
 #elif PRNG == PRNG_NONE
