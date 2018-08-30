@@ -42,8 +42,10 @@ template <typename inttype> inttype topx(float value, float k = 1.f)
 	return static_cast<inttype>(scaled_value);
 }
 
-void write_output(const std::string &output_basename, const stat_acc &time_ms, const std::shared_ptr<shadertoy::members::basic_member> &last_result, int width, int height, const std::string &include_stat, bool raw_output, const std::string &identifier)
+void write_output(const std::string &output_param, const stat_acc &time_ms, const std::shared_ptr<shadertoy::members::basic_member> &last_result, int width, int height, const std::string &include_stat, bool raw_output, const std::string &identifier)
 {
+    auto output_basename = (output_param == "auto") ? identifier : output_param;
+
     log::shadertoy()->info("Writing output at {}", output_basename);
 
     // Fetch from OpenGL
