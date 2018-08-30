@@ -112,9 +112,9 @@ uvec2 hash2(uvec2 x) {
 uvec4 hash4(uvec4 x) {
     // Wang hash
     x = (x ^ 61) ^ (x >> 16);
-    x *= 9;
+    x *= 9u;
     x = x ^ (x >> 4);
-    x *= 0x27d4eb2d;
+    x *= 0x27d4eb2du;
     x = x ^ (x >> 15);
     return x;
 }
