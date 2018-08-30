@@ -2,7 +2,7 @@
 #define W0VEC vec2(cos(W0), sin(W0))
 
 #define RESOLUTION ivec2(WIDTH, HEIGHT)
-#define TILE_COUNT (RESOLUTION / TILE_SIZE)
+#define TILE_COUNT (RESOLUTION / _TILE_SIZE)
 
 #define WEIGHTS_UNIFORM 0
 #define WEIGHTS_BERNOULLI 1
@@ -35,6 +35,12 @@
 
 #ifndef TILE_SIZE
 #define TILE_SIZE (RESOLUTION / 3)
+#endif
+
+#ifdef KHALF
+#define _TILE_SIZE (2 * TILE_SIZE)
+#else
+#define _TILE_SIZE TILE_SIZE
 #endif
 
 #ifndef DISP_SIZE
@@ -79,9 +85,9 @@ float h(vec2 x, float phase) {
         (2. * M_PI * F0 *
          dot(x /
 #ifdef KHALF
-             TILE_SIZE / 2
+             (_TILE_SIZE / 2)
 #else
-             TILE_SIZE
+             _TILE_SIZE
 #endif /* KHALF */
              , W0VEC) + phase);
 
@@ -522,8 +528,8 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
 
 void mainImage(out vec4 O, in vec2 U)
 {
-    ivec2 ccell = ivec2(U / TILE_SIZE);
-    vec2 ccenter = TILE_SIZE * (vec2(ccell) + .5);
+    ivec2 ccell = ivec2(U / _TILE_SIZE);
+    vec2 ccenter = _TILE_SIZE * (vec2(ccell) + .5);
     ivec2 disp;
 
     // Initial return value
@@ -542,7 +548,7 @@ void mainImage(out vec4 O, in vec2 U)
             // Current cell coordinates (periodic)
             ivec2 nc = ivec2(mod(vec2(cell), TILE_COUNT.x));
             // Cell center (pixel coordinates)
-            vec2 center = TILE_SIZE * (vec2(cell) + .5);
+            vec2 center = _TILE_SIZE * (vec2(cell) + .5);
 
             // Seed the point generator
             int splats;
@@ -556,14 +562,14 @@ void mainImage(out vec4 O, in vec2 U)
                 pg_point(pg_state, props);
 
                 // Adjust point for tile properties
-                props.xy = center + TILE_SIZE / 2 * props.xy;
+                props.xy = center + _TILE_SIZE / 2 * props.xy;
 
                 // Compute relative location
                 props.xy = (U - props.xy) /
 #ifdef KHALF
-                    (TILE_SIZE / 2)
+                    (_TILE_SIZE / 2)
 #else
-                    TILE_SIZE
+                    _TILE_SIZE
 #endif /* KHALF */
                 ;
 
