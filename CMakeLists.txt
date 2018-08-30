@@ -16,6 +16,9 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Load libshadertoy
 add_subdirectory(libshadertoy)
 
+# Export compile commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Load dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(Boost REQUIRED COMPONENTS filesystem program_options)
