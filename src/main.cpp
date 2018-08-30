@@ -270,7 +270,6 @@ int main(int argc, char *argv[])
 
         signal(SIGINT, sigint_handler);
 
-        std::shared_ptr<shadertoy::members::basic_member> last_result;
         while (!glfwWindowShouldClose(window) && !sigint_signaled)
         {
             // Poll events
@@ -289,7 +288,7 @@ int main(int argc, char *argv[])
             gl_call(glViewport, 0, 0, ctx.render_size.width, ctx.render_size.height);
 
             // Render the swap chain
-            last_result = context.render(chain);
+            context.render(chain);
 
             // Buffer swapping
             glfwSwapBuffers(window);
@@ -342,7 +341,7 @@ int main(int argc, char *argv[])
         // Write output data
         if (!output.empty())
         {
-            write_output(output, time_ms, last_result, ctx.render_size.width, ctx.render_size.height, include_stat, raw_output, ctx.identifier);
+            write_output(output, time_ms, ctx.chain.members().front(), ctx.render_size.width, ctx.render_size.height, include_stat, raw_output, ctx.identifier);
         }
 
         // TODO: actually test something
