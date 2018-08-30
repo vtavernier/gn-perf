@@ -3,9 +3,12 @@
 
 inline unsigned int uhash(unsigned int x)
 {
-    x = ((x >> 16u) ^ x) * 0x45d9f3bu;
-    x = ((x >> 16u) ^ x) * 0x45d9f3bu;
-    x = (x >> 16) ^ x;
+    // Wang hash
+    x = (x ^ 61) ^ (x >> 16);
+    x *= 9u;
+    x = x ^ (x >> 4);
+    x *= 0x27d4eb2du;
+    x = x ^ (x >> 15);
     return x;
 }
 
