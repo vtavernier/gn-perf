@@ -77,7 +77,11 @@ float h(vec2 x, float phase) {
     s = cos(2. * M_PI * F0 * dot(x / TILE_SIZE, W0VEC) + phase);
 #endif
 
+#ifdef KSHOW
+    return eb > 0. ? .5 : 0.;
+#else
     return eb * s;
+#endif
 }
 
 // Hashing function
