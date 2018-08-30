@@ -3,8 +3,8 @@
 size = 512
 
 define = SPLATS=4
-define = F0=16
-define = TILE_SIZE=16
+define = F0=32
+define = TILE_SIZE=32
 define = POINTS=POINTS_[% points %]
 define = WEIGHTS=WEIGHTS_[% weights %]
 define = PRNG=PRNG_[% prng %]
