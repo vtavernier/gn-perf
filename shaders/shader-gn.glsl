@@ -202,17 +202,15 @@ vec2 prng_rand2(inout prng_state this_) {
 }
 
 #elif PRNG == PRNG_HASH
-struct prng_state { uint x_; };
+struct prng_state { uint x_; uint c_; };
 
 void prng_seed(inout prng_state this_, uint seed) {
-    this_.x_ = seed << 8;
+    this_.x_ = hash(seed);
+    this_.c_ = 0;
 }
 
 float prng_rand1(inout prng_state this_) {
-    this_.x_ = (this_.x_ & 0xFFFF0000u) |
-        (((this_.x_ & 0x0000FFFFu) + 1) & 0x0000FFFFu);
-
-    return hash(this_.x_) / float(4294967295u);
+    return hash(this_.x_ ^ ((this_.c_ += 1) << 8)) / float(4294967295u);
 }
 
 vec2 prng_rand2(inout prng_state this_) {
