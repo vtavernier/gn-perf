@@ -14,7 +14,7 @@ my $tt = Template->new({
 my $i = 0;
 for my $points (qw/WHITE STRATIFIED JITTERED HEX_JITTERED GRID HEX_GRID/) {
     for my $weights (qw/UNIFORM BERNOULLI NONE RANDPHASE/) {
-        for my $prng (qw/LCG XOROSHIRO HASH/) {
+        for my $prng (qw/LCG XORSHIFT XOROSHIRO HASH/) {
             for my $kernel (qw/COS SIN/) {
                 my $fn = sprintf("%03d_%s-%s-%s-%s",
                     $i++, map({ lc } $points, $weights, $prng, $kernel));
