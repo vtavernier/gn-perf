@@ -12,4 +12,7 @@ output = build/[% fn %]
 [% IF ksin %]
 define = KSIN
 [% END %]
+[% IF randphase %]
+define = RANDOM_PHASE
+[% END %]
 

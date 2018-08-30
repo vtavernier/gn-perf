@@ -26,7 +26,8 @@ for my $points (qw/WHITE STRATIFIED JITTERED HEX_JITTERED GRID HEX_GRID/) {
                         weights => $weights eq 'RANDPHASE' ? 'NONE' : $weights,
                         prng => $prng,
                         ksin => $kernel eq 'SIN',
-                        fn => $fn
+                        fn => $fn,
+                        randphase => $weights eq 'RANDPHASE',
                     }, $fh) || die $tt->error(), "\n";
                 close $fh;
                 chmod 0755, "$FindBin::Bin/$fn.t";
