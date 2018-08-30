@@ -69,13 +69,21 @@ float h(vec2 x, float phase) {
     eb = eb < exp(-M_PI) ? 0. : eb;
 #endif
 
-    float s;
     // Compute the wave part of the kernel
+    float s =
 #ifdef KSIN
-    s = sin(2. * M_PI * F0 * dot(x / TILE_SIZE, W0VEC) + phase);
+        sin
 #else
-    s = cos(2. * M_PI * F0 * dot(x / TILE_SIZE, W0VEC) + phase);
-#endif
+        cos
+#endif /* KSIN */
+        (2. * M_PI * F0 *
+         dot(x /
+#ifdef KHALF
+             TILE_SIZE / 2
+#else
+             TILE_SIZE
+#endif /* KHALF */
+             , W0VEC) + phase);
 
 #ifdef KSHOW
     return eb > 0. ? .5 : 0.;
@@ -515,15 +523,19 @@ void pg_point(inout point_gen_state this_, out vec4 pt)
 void mainImage(out vec4 O, in vec2 U)
 {
     ivec2 ccell = ivec2(U / TILE_SIZE);
+    vec2 ccenter = TILE_SIZE * (vec2(ccell) + .5);
     ivec2 disp;
 
     // Initial return value
     O = vec4(0.);
 
-    // TODO: This can be halved depending on the location U w.r.t. cell center
+#ifdef KHALF
+    for (disp.x = (U.x < ccenter.x ? -DISP_SIZE : 0); disp.x <= (U.x > ccenter.x ? DISP_SIZE : 0); ++disp.x)
+        for (disp.y = (U.y < ccenter.y ? -DISP_SIZE : 0); disp.y <= (U.y > ccenter.y ? DISP_SIZE : 0); ++disp.y)
+#else
     for (disp.x = -DISP_SIZE; disp.x <= DISP_SIZE; ++disp.x)
-    {
         for (disp.y = -DISP_SIZE; disp.y <= DISP_SIZE; ++disp.y)
+#endif /* KHALF */
         {
             // Current cell coordinates
             ivec2 cell = ccell + disp;
@@ -547,14 +559,25 @@ void mainImage(out vec4 O, in vec2 U)
                 props.xy = center + TILE_SIZE / 2 * props.xy;
 
                 // Compute relative location
-                props.xy = (U - props.xy) / TILE_SIZE;
+                props.xy = (U - props.xy) /
+#ifdef KHALF
+                    (TILE_SIZE / 2)
+#else
+                    TILE_SIZE
+#endif /* KHALF */
+                ;
 
                 // Compute contribution
                 O += props.z * h(props.xy, props.w);
             }
         }
-    }
 
     // [0, 1] range
-    O = .5 + .5 * O / sqrt(pg_expected());
+    O = .5 + .5 * O /
+#ifdef KHALF
+        (sqrt(pg_expected()) / 2.)
+#else 
+        sqrt(pg_expected())
+#endif
+    ;
 }
