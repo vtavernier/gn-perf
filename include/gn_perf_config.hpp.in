@@ -4,20 +4,8 @@
 #define GN_PERF_BASE_DIR "@CMAKE_CURRENT_SOURCE_DIR@"
 #define GN_PERF_VERSION  "@GIT_REPO_VERSION@"
 
-// NVML_FOUND is either TRUE or FALSE, which need to be defined for the preprocessor
-#ifndef TRUE
-#define TRUE 1
-#endif /* TRUE */
-
-#ifndef FALSE
-#define FALSE 0
-#endif /* FALSE */
-
-#if @NVML_FOUND@
-#define HAS_NVML 1
+#if @HAS_NVML@
 #include <nvml.h>
-#else
-#define HAS_NVML 0
-#endif
+#endif /* HAS_NVML */
 
 #endif /* _GN_PERF_CONFIG_HPP_ */

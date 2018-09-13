@@ -10,10 +10,12 @@ convolution in order to evaluate their performance.
 * epoxy
 * libshadertoy (included in `libshadertoy/`)
 * PicoSHA2 (included in `PicoSHA2/`)
+* libpng++
 
 ```bash
-sudo apt install build-essential cmake pkg-config libepoxy-dev libglfw3-dev libboost-filesystem-dev \
-                 libboost-date-time-dev libgl1-mesa-dev libglm-dev libunwind-dev
+sudo apt install build-essential git cmake pkg-config libepoxy-dev libglfw3-dev libboost-filesystem-dev \
+                 libboost-date-time-dev libboost-program-options-dev libgl1-mesa-dev libglm-dev \
+                 libunwind-dev libpng++-dev libsoil-dev libopenexr-dev
 ```
 
 ## Getting started

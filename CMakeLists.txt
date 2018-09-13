@@ -28,9 +28,6 @@ find_package(PNG REQUIRED)
 find_package(NVML)
 find_path(PNGPP_INCLUDE_DIR png++/png.hpp)
 
-# Configure header
-configure_file(${INC_DIR}/gn_perf_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/gn_perf_config.hpp)
-
 add_executable(gn_perf ${SRC_DIR}/main.cpp ${SRC_DIR}/gn_glfw.cpp)
 
 set_target_properties(gn_perf PROPERTIES CXX_STANDARD 14)
@@ -49,9 +46,14 @@ target_link_libraries(gn_perf PRIVATE
 if(NVML_FOUND)
     target_include_directories(gn_perf PRIVATE ${NVML_INCLUDE_DIR})
     target_link_libraries(gn_perf PRIVATE ${NVML_LIBRARIES})
+    set(HAS_NVML 1)
     message(STATUS "Using NVML for P-state detection")
 else()
+    set(HAS_NVML 0)
     message(STATUS "Not using NVML")
 endif()
+
+# Configure header
+configure_file(${INC_DIR}/gn_perf_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/gn_perf_config.hpp)
 
 target_compile_options(gn_perf PRIVATE -Wall -Wno-attributes)
