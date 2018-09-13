@@ -65,15 +65,24 @@
 
 float h(vec2 x, float phase) {
     float r = length(x);
-    float eb = exp(-M_PI * r * r);
+    float eb;
 
     // Truncate kernel so it fits in a cell
+    if (r > 1.) {
+        eb = 0.;
+    } else {
+#ifdef KKAISER_BESSEL
+        eb = 0.402 + 0.498 * cos(2. * M_PI * (r / 8.))
+                   + 0.099 * cos(4. * M_PI * (r / 8.))
+                   + cos(6. * M_PI * (r / 8.));
+#else /* KKAISER_BESSEL */
 #ifdef KTRUNC
-    eb = eb - exp(-M_PI);
-    eb = eb < 0. ? 0. : eb;
+        eb = exp(-M_PI * r * r) - exp(-M_PI);
 #else
-    eb = eb < exp(-M_PI) ? 0. : eb;
-#endif
+        eb = exp(-M_PI * r * r);
+#endif /* KTRUNC */
+#endif /* KKAISER_BESSEL */
+    }
 
     // Compute the wave part of the kernel
     float s =

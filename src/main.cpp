@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
          "\t - KSIN: use sin instead of cos for kernel\n"
          "\t - KSHOW: show kernel footprint as a disk\n"
          "\t - KHALF: use a half-size kernel, evaluate only 4 cells\n"
+         "\t - KKAISER_BESSEL: use the Kaiser-Bessel window for the kernel\n"
          "\t - RANDOM_PHASE: use random phase kernel\n"
          "\t - WEIGHTS=weight: type of the random weights to use:\n"
          "\t   - WEIGHTS_UNIFORM: uniform [-1, 1] weights (default)\n"
