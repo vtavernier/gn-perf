@@ -26,7 +26,7 @@ cd gn-perf
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
-./gn_perf -h
+./gn_perf -DTILE_SIZE=16 -DF0=16 -DSPLATS=16 -s 512
 ```
 
 ## Usage
