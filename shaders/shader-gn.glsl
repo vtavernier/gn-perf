@@ -77,7 +77,7 @@ float h(vec2 x, float phase) {
                    + cos(6. * M_PI * (r / 8.));
 #else /* KKAISER_BESSEL */
 #ifdef KTRUNC
-        eb = exp(-M_PI * r * r) - exp(-M_PI);
+        eb = (exp(-M_PI * r * r) - exp(-M_PI)) / (1. - exp(-M_PI));
 #else
         eb = exp(-M_PI * r * r);
 #endif /* KTRUNC */
