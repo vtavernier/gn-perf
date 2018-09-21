@@ -1,0 +1,22 @@
+#!/usr/bin/env gnuplot
+set terminal pdf
+set output 'build/ptdist-perf.pdf'
+set key autotitle columnheader
+set key left top
+set xlabel 'N'
+set ylabel 't (ms)'
+
+set style line 1 lc rgb '#0000aa'
+set style line 2 lc rgb '#00ffff'
+set style line 3 lc rgb '#00ff00'
+set style line 4 lc rgb '#00aa00'
+set style line 5 lc rgb '#800080'
+set style line 6 lc rgb '#5555ff'
+
+plot for [i=2:7] 'build/ptdist-perf.csv' using 1:i w l title columnheader(i) ls i-1
+
+set output 'build/wkern-perf.pdf'
+
+plot for [i=2:4] 'build/wkern-perf.csv' using 1:i w l title columnheader(i) ls 5 dt i-1
+
+system('/bin/bash -c "sleep 0.5 ; cd build ; pdfjoin ptdist-perf.pdf wkern-perf.pdf |& tail -1" &')
