@@ -116,6 +116,7 @@ package GnTest {
 my %outputs = (
     ptdist => IO::File->new("build/ptdist-perf.csv", "w"),
     wkern => IO::File->new("build/wkern-perf.csv", "w"),
+    final => IO::File->new("build/final.csv", "w"),
 );
 
 #
@@ -130,6 +131,9 @@ push @samples, {
 }, {
     raw => qq{N\tUniform\tBernoulli\t"Random phase"\n},
     dest => 'wkern',
+}, {
+    raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\n},
+    dest => 'final',
 };
 
 for (my $i = 1; $i < 30; ++$i) {
@@ -163,6 +167,17 @@ for (my $i = 1; $i < 30; ++$i) {
         }
     }
 
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_WHITE")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_UNIFORM'),
+        dest => 'final',
+    };
+
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI'),
+        dest => 'final',
+    };
 }
 
 #
