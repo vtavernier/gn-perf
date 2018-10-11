@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     int width, height, size;
     long long samples, warmup_samples;
     bool st_silent, all_silent, raw_output, sync_anyways, test_mode;
-    std::string include_stat, output;
+    std::string include_stat, output, lut_path;
     std::vector<std::string> defines;
 
     po::options_description gn_desc("Noise options");
@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
         ("warmup,W", po::value(&warmup_samples)->default_value(-1), "Number of samples to warm-up the measurements")
         ("samples,n", po::value(&samples)->default_value(0), "Number of samples to collect for statistics")
         ("output,o", po::value(&output)->default_value(""), "Output path for the control frame")
+        ("lut,l", po::value(&lut_path)->default_value(""), "LUT texture path")
         ("define,D", po::value(&defines)->multitoken()->composing(), "Preprocessor definitions for the shader\n"
          "The following values are supported: \n"
          "\t * SPLATS=n: number of splats per cell\n"
@@ -136,7 +137,8 @@ int main(int argc, char *argv[])
          "\t   - PRNG_XOROSHIRO: SIMD xoroshiro64** generator\n"
          "\t   - PRNG_HASH: integer hash generator (2^8 period)\n"
          "\t   - PRNG_XORSHIFT: xorshift tuple generator\n"
-         "\t   - PRNG_NONE: constant generator for debugging\n");
+         "\t   - PRNG_NONE: constant generator for debugging\n"
+         "\t - PRESET_BOOT: enable the boot preset, should be used with --lut\n");
 
     po::options_description desc("gn-perf " GN_PERF_VERSION " (" GN_PERF_BASE_DIR ")");
     desc.add_options()
@@ -256,7 +258,7 @@ int main(int argc, char *argv[])
     return glfw_run(width, height, visible, [&](auto *window)
     {
         // Create the context and swap chain
-        gn_perf_ctx ctx(width, height, defines, visible);
+        gn_perf_ctx ctx(width, height, defines, visible, lut_path);
         auto &context(ctx.context);
         auto &chain(ctx.chain);
 

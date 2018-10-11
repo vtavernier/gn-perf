@@ -28,14 +28,29 @@ package GnTest {
         }, $class;
     }
 
-    sub samples {
-        my ($self, $value) = @_;
+    sub _opt {
+        my ($self, $opt, $value) = @_;
         if (defined $value) {
-            $self->{_private}->{n} = $value;
+            $self->{_private}->{$opt} = $value;
             return $self;
         } else {
-            return $self->{_private}->{n};
+            return $self->{_private}->{$opt};
         }
+    }
+
+    sub samples {
+        my ($self, $value) = @_;
+        $self->_opt('n', $value)
+    }
+
+    sub lut {
+        my ($self, $value) = @_;
+        $self->_opt('-lut', $value)
+    }
+
+    sub output {
+        my ($self, $value) = @_;
+        $self->_opt('-output', $value)
     }
 
     sub run {
@@ -51,14 +66,15 @@ package GnTest {
 
         for my $k (sort keys %{$self->{_private}}) {
             my $v = $self->{_private}->{$k};
+            my $kopt = $k =~ /^-/ ? "-$k " : "-$k";
 
             if (ref $v eq 'HASH') {
                 for my $sk (sort keys %$v) {
                     my $sv = $v->{$sk};
-                    push @cmd, "-$k$sk" if $sv;
+                    push @cmd, "$kopt$sk" if $sv;
                 }
             } else {
-                push @cmd, "-$k$v";
+                push @cmd, "$kopt$v";
             }
         }
 
@@ -92,10 +108,10 @@ package GnTest {
 
         if ($method_missing =~ m/set_(.*)$/) {
             if (defined $value) {
-                $self->{_private}->{D}->{$1} = $value;
+                $self->{_private}->{D}->{uc $1} = $value;
                 return $self;
             } else {
-                return $self->{_private}->{D}->{$1};
+                return $self->{_private}->{D}->{uc $1};
             }
         } else {
             if (defined $value) {
@@ -117,6 +133,7 @@ my %outputs = (
     ptdist => IO::File->new("build/ptdist-perf.csv", "w"),
     wkern => IO::File->new("build/wkern-perf.csv", "w"),
     final => IO::File->new("build/final.csv", "w"),
+    boot => IO::File->new("build/boot.csv", "w"),
 );
 
 #
@@ -134,9 +151,12 @@ push @samples, {
 }, {
     raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\n},
     dest => 'final',
+}, {
+    raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\n},
+    dest => 'boot',
 };
 
-for (my $i = 1; $i < 30; ++$i) {
+for (my $i = 1; $i <= 30; ++$i) {
     for my $pointdist (qw/GRID HEX_GRID JITTERED HEX_JITTERED WHITE STRATIFIED/) {
         push @samples, {
             rowid => $i,
@@ -177,6 +197,18 @@ for (my $i = 1; $i < 30; ++$i) {
         rowid => $i,
         test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI'),
         dest => 'final',
+    };
+
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_WHITE")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_UNIFORM')->set_preset_boot(1)->lut('lut/boot.png')->output(sprintf 'build/boot-white-%02d', $i)->f0(64.)->tile_size(32),
+        dest => 'boot',
+    };
+
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI')->set_preset_boot(1)->lut('lut/boot.png')->output(sprintf 'build/boot-strat-%02d', $i)->f0(64.)->tile_size(32),
+        dest => 'boot',
     };
 }
 

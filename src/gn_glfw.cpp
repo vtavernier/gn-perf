@@ -55,7 +55,7 @@ int splats_hex_sqrti(int splats)
     return sqrti(splats);
 }
 
-gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines, bool visible)
+gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &defines, bool visible, const std::string &lut_path)
     : context(),
     chain(),
     render_size(width, height)
@@ -85,6 +85,9 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
     buffer_definitions.emplace("WIDTH", std::to_string(width));
     buffer_definitions.emplace("HEIGHT", std::to_string(height));
 
+    if (!lut_path.empty())
+        buffer_definitions.emplace("ENABLE_LUT", std::string());
+
     // Define SPLATS_SQRTI if possible
     auto it = buffer_definitions.find("SPLATS");
     if (it != buffer_definitions.end())
@@ -105,6 +108,18 @@ gn_perf_ctx::gn_perf_ctx(int width, int height, const std::vector<std::string> &
     image_buffer = std::make_shared<shadertoy::buffers::toy_buffer>("image");
     image_buffer->source_map(&sources);
     image_buffer->source_file(GN_PERF_BASE_DIR "/shaders/shader-gn.glsl");
+
+    if (!lut_path.empty())
+    {
+        shadertoy::utils::input_loader loader;
+
+        image_buffer->inputs().emplace_back(loader.create(std::string("file:///") + lut_path));
+
+        auto &input(*image_buffer->inputs().front().input());
+        input.wrap(GL_CLAMP_TO_EDGE);
+        input.mag_filter(GL_LINEAR);
+        input.min_filter(GL_LINEAR);
+    }
 
     // Add the image buffer to the swap chain, at the given size
     chain.emplace_back(image_buffer, shadertoy::make_size_ref(render_size),

@@ -9,7 +9,7 @@ struct gn_perf_ctx
     std::shared_ptr<shadertoy::buffers::toy_buffer> image_buffer;
     std::string identifier;
 
-    gn_perf_ctx(int width, int height, const std::vector<std::string> &defines, bool visible);
+    gn_perf_ctx(int width, int height, const std::vector<std::string> &defines, bool visible, const std::string &lut_path);
 };
 
 void gn_set_framebuffer_size(GLFWwindow *window, int width, int height);

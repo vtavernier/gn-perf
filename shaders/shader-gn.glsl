@@ -1,5 +1,5 @@
 #define M_PI 3.141592653589793
-#define W0VEC vec2(cos(W0), sin(W0))
+#define W0VEC(w0) vec2(cos(w0), sin(w0))
 
 #define RESOLUTION ivec2(WIDTH, HEIGHT)
 #define TILE_COUNT (RESOLUTION / _TILE_SIZE)
@@ -37,6 +37,10 @@
 #define TILE_SIZE (RESOLUTION / 3)
 #endif
 
+#ifndef K
+#define K 1.
+#endif
+
 #ifdef KHALF
 #define _TILE_SIZE (2 * TILE_SIZE)
 #else
@@ -63,9 +67,23 @@
 #define PRNG PRNG_LCG
 #endif
 
+#ifdef PRESET_BOOT
+#define RANDOM_PHASE
+#endif
+
 float h(vec2 x, float phase) {
     float r = length(x);
     float eb;
+    float w0 = W0;
+
+#ifdef PRESET_BOOT
+    w0 = phase < -(M_PI / 3.) ?
+        0. :
+        (phase > (M_PI / 3.) ?
+         M_PI / 3. :
+         2. * M_PI / 3.);
+    phase = 0.;
+#endif /* PRESET_BOOT */
 
     // Truncate kernel so it fits in a cell
     if (r > 1.) {
@@ -98,12 +116,12 @@ float h(vec2 x, float phase) {
 #else
              _TILE_SIZE
 #endif /* KHALF */
-             , W0VEC) + phase);
+             , W0VEC(w0)) + phase);
 
 #ifdef KSHOW
     return eb > 0. ? .5 : 0.;
 #else
-    return eb * s;
+    return K * eb * s;
 #endif
 }
 
@@ -267,7 +285,7 @@ int prng_poisson(inout prng_state this_, float mean) {
 #if PRNG != PRNG_NONE
     int em = 0;
 
-    if (mean < 50.)
+    if (mean < 45.)
     {
         // Knuth
         float g = exp(-mean);
@@ -593,4 +611,8 @@ void mainImage(out vec4 O, in vec2 U)
         sqrt(pg_expected())
 #endif
     ;
+
+#ifdef ENABLE_LUT
+    O = texture(iChannel0, vec2(O.x, .5));
+#endif
 }
