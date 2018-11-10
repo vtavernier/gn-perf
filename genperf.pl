@@ -152,7 +152,7 @@ push @samples, {
     raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\n},
     dest => 'final',
 }, {
-    raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\n},
+    raw => qq{N\t"Uniform Poisson"\t"Bernoulli strat. Poisson"\t"Uniform Poisson (no LUT)"\t"Bernoulli strat. Poisson (no LUT)"\n},
     dest => 'boot',
 };
 
@@ -198,7 +198,9 @@ for (my $i = 1; $i <= 30; ++$i) {
         test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI'),
         dest => 'final',
     };
+}
 
+for (my $i = 1; $i <= 45; ++$i) {
     push @samples, {
         rowid => $i,
         test => GnTest->new->points("POINTS_WHITE")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_UNIFORM')->set_preset_boot(1)->lut('lut/boot.png')->output(sprintf 'build/boot-white-%02d', $i)->f0(64.)->tile_size(32),
@@ -208,6 +210,18 @@ for (my $i = 1; $i <= 30; ++$i) {
     push @samples, {
         rowid => $i,
         test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI')->set_preset_boot(1)->lut('lut/boot.png')->output(sprintf 'build/boot-strat-%02d', $i)->f0(64.)->tile_size(32),
+        dest => 'boot',
+    };
+
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_WHITE")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_UNIFORM')->set_preset_boot(1)->output(sprintf 'build/boot-nolut-white-%02d', $i)->f0(64.)->tile_size(32),
+        dest => 'boot',
+    };
+
+    push @samples, {
+        rowid => $i,
+        test => GnTest->new->points("POINTS_STRATIFIED")->splats($i)->random_seed('iFrame')->samples(500)->weights('WEIGHTS_BERNOULLI')->set_preset_boot(1)->output(sprintf 'build/boot-nolut-strat-%02d', $i)->f0(64.)->tile_size(32),
         dest => 'boot',
     };
 }
