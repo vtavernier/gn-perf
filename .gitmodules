@@ -1,6 +1,9 @@
 [submodule "libshadertoy"]
 	path = libshadertoy
-	url = https://gitlab.inria.fr/vtaverni/libshadertoy.git
+	url = https://github.com/vtavernier/libshadertoy.git
 [submodule "PicoSHA2"]
 	path = PicoSHA2
 	url = https://github.com/okdshin/PicoSHA2.git
+[submodule "glfw"]
+	path = glfw
+	url = https://github.com/glfw/glfw.git

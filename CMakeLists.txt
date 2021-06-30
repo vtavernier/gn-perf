@@ -23,12 +23,28 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(Boost REQUIRED COMPONENTS filesystem program_options)
 find_package(Epoxy REQUIRED)
-find_package(GLFW3 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(NVML)
-find_path(PNGPP_INCLUDE_DIR png++/png.hpp)
+
+# glfw
+set(GLFW_BUILD_EXAMPLES OFF)
+set(GLFW_BUILD_TESTS OFF)
+set(GLFW_BUILD_DOCS OFF)
+add_subdirectory(glfw)
+
+# png++
+include(ExternalProject)
+ExternalProject_Add(pngpp
+    URL https://download.savannah.nongnu.org/releases/pngpp/png++-0.2.9.tar.gz
+    URL_HASH SHA256=abbc6a0565122b6c402d61743451830b4faee6ece454601c5711e1c1b4238791
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND "")
+ExternalProject_Get_Property(pngpp SOURCE_DIR)
+set(PNGPP_INCLUDE_DIR ${SOURCE_DIR})
 
 add_executable(gn_perf ${SRC_DIR}/main.cpp ${SRC_DIR}/gn_glfw.cpp)
+add_dependencies(gn_perf pngpp)
 
 set_target_properties(gn_perf PROPERTIES CXX_STANDARD 14)
 target_include_directories(gn_perf PRIVATE
@@ -38,7 +54,7 @@ target_include_directories(gn_perf PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(gn_perf PRIVATE
     ${EPOXY_LIBRARIES}
-    ${GLFW3_LIBRARIES}
+    glfw
     ${Boost_LIBRARIES}
     ${PNG_LIBRARY}
     shadertoy-shared)

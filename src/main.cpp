@@ -11,7 +11,7 @@
 
 #include <signal.h>
 
-#include <png++/png.hpp>
+#include <png.hpp>
 
 #include "gn_perf_config.hpp"
 #include "stat_acc.hpp"
