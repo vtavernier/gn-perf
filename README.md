@@ -3,6 +3,8 @@
 This tool implements various optimizations to procedural noise based on sparse Gabor
 convolution in order to evaluate their performance.
 
+![Screenshot](screenshot1.png)
+
 ## Dependencies
 
 * Boost
@@ -13,9 +15,10 @@ convolution in order to evaluate their performance.
 * libpng++
 
 ```bash
-sudo apt install build-essential git cmake pkg-config libepoxy-dev libglfw3-dev libboost-filesystem-dev \
+sudo apt install build-essential git cmake pkg-config libepoxy-dev libboost-filesystem-dev \
                  libboost-date-time-dev libboost-program-options-dev libgl1-mesa-dev libglm-dev \
-                 libunwind-dev libpng++-dev libsoil-dev libopenexr-dev
+                 libunwind-dev libpng++-dev libsoil-dev libopenexr-dev \
+                 libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 ```
 
 ## Getting started
@@ -37,7 +40,7 @@ overridden by those on the command line. See `./gn_perf -h` for the full configu
 
 ## Author
 
-Vincent Tavernier <vincent.tavernier@inria.fr>
+Vincent Tavernier <vince.tavernier@gmail.com>
 
 ## License
 
